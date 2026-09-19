@@ -165,11 +165,12 @@ async def review_file(req: ReviewRequest):
     ):
         sources_used.append(FindingSource.fused)
 
-    # Apply RL priority adjustments
-    for f in fused:
-        adj = prioritizer.get_priority_adjustment(f)
-        # We don't mutate the finding directly; scoring will read confidence
-        # and the prioritizer influences via scoring integration
+    # Apply RL priority adjustments (experimental)
+    try:
+        for f in fused:
+            prioritizer.get_priority_adjustment(f)
+    except Exception as e:
+        logger.warning("RL priority adjustment skipped: %s", e)
 
     # Score and rank
     ranked = scoring.rank_findings(fused)

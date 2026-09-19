@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 import tempfile
 import uuid
 from typing import List
@@ -10,8 +11,17 @@ from models import Finding, FindingSource, Severity
 
 logger = logging.getLogger(__name__)
 
-SEMGREP_PATH = os.environ.get("SEMGREP_PATH", "semgrep")
 SEMGREP_TIMEOUT = float(os.environ.get("SEMGREP_TIMEOUT", "30.0"))
+
+def _get_semgrep_bin() -> str:
+    """Return configured SEMGREP_PATH or auto-detect semgrep in virtual environment."""
+    path_env = os.environ.get("SEMGREP_PATH")
+    if path_env:
+        return path_env
+    venv_bin = os.path.join(os.path.dirname(sys.executable), "semgrep")
+    if os.path.exists(venv_bin):
+        return venv_bin
+    return "semgrep"
 
 def _map_severity(semgrep_severity: str) -> Severity:
     """Map Semgrep severity to our Severity model."""
@@ -83,9 +93,10 @@ def _parse_semgrep_output(output: str, original_path_override: str = None) -> Li
 
 async def _run_semgrep(target_path: str) -> str:
     """Run semgrep CLI as a subprocess with timeout and return the JSON output."""
+    semgrep_bin = _get_semgrep_bin()
     try:
         process = await asyncio.create_subprocess_exec(
-            SEMGREP_PATH,
+            semgrep_bin,
             "--json",
             "--config", "auto",
             target_path,
@@ -114,7 +125,7 @@ async def _run_semgrep(target_path: str) -> str:
             
         return stdout.decode()
     except FileNotFoundError:
-        logger.warning(f"Semgrep binary not found at '{SEMGREP_PATH}'. Ensure it is installed or set SEMGREP_PATH.")
+        logger.warning(f"Semgrep binary not found at '{semgrep_bin}'. Ensure it is installed or set SEMGREP_PATH.")
         return ""
     except Exception as e:
         logger.error(f"Error running semgrep: {e}")

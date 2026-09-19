@@ -58,6 +58,64 @@ class TestSemgrepRegression(unittest.TestCase):
         self.assertEqual(f.source, FindingSource.semgrep)
         self.assertAlmostEqual(f.confidence, 0.9)
 
+    def test_semgrep_empty_results(self):
+        sample_json = json.dumps({"results": []})
+        findings = scanner_semgrep._parse_semgrep_output(sample_json, original_path_override="src/clean.py")
+        self.assertEqual(findings, [])
+
+    def test_semgrep_malformed_json(self):
+        malformed_json = "{'results': [invalid_json}"
+        findings = scanner_semgrep._parse_semgrep_output(malformed_json, original_path_override="src/clean.py")
+        self.assertEqual(findings, [])
+
+    def test_semgrep_nonzero_exit_code(self):
+        async def run_nonzero_test():
+            mock_proc = AsyncMock()
+            mock_proc.communicate = AsyncMock(return_value=(b"", b"Fatal error reading config"))
+            mock_proc.returncode = 2
+
+            with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+                output = await scanner_semgrep._run_semgrep("target_dir")
+                self.assertEqual(output, "")
+
+        asyncio.run(run_nonzero_test())
+
+    def test_semgrep_scoring_compatibility(self):
+        sample_json = json.dumps({
+            "results": [
+                {
+                    "check_id": "rules.python.security.sqli",
+                    "path": "app.py",
+                    "start": {"line": 10, "col": 1},
+                    "end": {"line": 12, "col": 20},
+                    "extra": {
+                        "message": "SQL Injection",
+                        "severity": "ERROR",
+                        "metadata": {"confidence": "HIGH"}
+                    }
+                },
+                {
+                    "check_id": "rules.python.security.info",
+                    "path": "app.py",
+                    "start": {"line": 1, "col": 1},
+                    "end": {"line": 1, "col": 10},
+                    "extra": {
+                        "message": "Info note",
+                        "severity": "INFO",
+                        "metadata": {"confidence": "LOW"}
+                    }
+                }
+            ]
+        })
+        findings = scanner_semgrep._parse_semgrep_output(sample_json)
+        self.assertEqual(len(findings), 2)
+
+        import scoring
+        ranked = scoring.rank_findings(findings)
+        self.assertEqual(len(ranked), 2)
+        self.assertEqual(ranked[0].severity, Severity.high)
+        self.assertEqual(ranked[1].severity, Severity.low)
+
     def test_semgrep_timeout_handling(self):
         async def run_timeout_test():
             mock_proc = AsyncMock()
