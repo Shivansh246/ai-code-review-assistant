@@ -19,6 +19,7 @@ import fusion
 import scanner_llm
 import scanner_osv
 import scanner_semgrep
+import xai
 
 
 class TestSemgrepRegression(unittest.TestCase):
@@ -737,6 +738,180 @@ class TestFusionRegression(unittest.TestCase):
             self.assertEqual(mf.package_version, "2.20.0")
             self.assertIn("OSV finding report", mf.description)
             self.assertIn("LLM verification of vulnerability", mf.description)
+        asyncio.run(run_test())
+
+
+class TestXAIRegression(unittest.TestCase):
+    """Tests for Explainable AI (XAI) subsystem."""
+
+    def test_xai_valid_finding_structured_explanation(self):
+        """1. Valid finding -> structured explanation."""
+        async def run_test():
+            finding = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="SQL Injection",
+                description="Unescaped user input passed to SQL query.",
+                file="evaluation/test_samples/vulnerable_app.py",
+                line_start=10,
+                line_end=15,
+                confidence=0.9,
+                rule_id="rules.python.security.sqli"
+            )
+            res = await xai.generate_structured_explanation(finding)
+            self.assertIn("finding_id", res)
+            self.assertEqual(res["title"], "SQL Injection")
+            self.assertEqual(res["severity"], "high")
+            self.assertEqual(res["rule_id"], "rules.python.security.sqli")
+            self.assertIn("explanation", res)
+            self.assertIn("evidence_snippet", res)
+            self.assertIn("risk_score", res)
+            self.assertIn("score_factors", res)
+            self.assertIn("remediation_rationale", res)
+        asyncio.run(run_test())
+
+    def test_xai_evidence_snippet_extraction(self):
+        """2. Correct source-line extraction."""
+        snippet, highlighted = xai.extract_evidence_snippet(
+            "evaluation/test_samples/vulnerable_app.py", 1, 5
+        )
+        self.assertIn("import", snippet)
+        self.assertEqual(highlighted, [1, 2, 3, 4, 5])
+
+    def test_xai_line_number_preservation(self):
+        """3. Correct line-number preservation."""
+        snippet, _ = xai.extract_evidence_snippet(
+            "evaluation/test_samples/vulnerable_app.py", 10, 12
+        )
+        self.assertIn("  10 |", snippet)
+        self.assertIn("  11 |", snippet)
+
+    def test_xai_missing_source_file_fallback(self):
+        """4. Invalid/missing source file -> fallback text without exception."""
+        snippet, lines = xai.extract_evidence_snippet(
+            "non_existent_file_path_123.py", 10, 15
+        )
+        self.assertIn("Source snippet unavailable", snippet)
+        self.assertEqual(lines, [10, 11, 12, 13, 14, 15])
+
+    def test_xai_invalid_line_range_clamping(self):
+        """5. Invalid line range -> clamped safely."""
+        snippet, lines = xai.extract_evidence_snippet(
+            "evaluation/test_samples/vulnerable_app.py", -5, 99999
+        )
+        self.assertIsNotNone(snippet)
+        self.assertTrue(len(lines) > 0)
+
+    def test_xai_missing_finding_metadata(self):
+        """6. Missing finding metadata -> fallback fields handled cleanly."""
+        async def run_test():
+            finding = Finding(
+                source=FindingSource.llm,
+                severity=Severity.info,
+                title="Generic Finding",
+                description="No specific rule or CVE ID",
+                file="app.py",
+                line_start=1,
+                line_end=1,
+                confidence=0.5
+            )
+            res = await xai.generate_structured_explanation(finding)
+            self.assertIsNone(res["rule_id"])
+            self.assertIsNone(res["cve_id"])
+            self.assertIn("Remediation", res["explanation"])
+        asyncio.run(run_test())
+
+    def test_xai_risk_score_factor_explanation(self):
+        """7. Risk-score factor explanation."""
+        finding = Finding(
+            source=FindingSource.osv,
+            severity=Severity.critical,
+            title="Critical OSV Vuln",
+            description="Remote code execution vulnerability.",
+            file="requirements.txt",
+            line_start=1,
+            line_end=1,
+            confidence=1.0,
+            cve_id="CVE-2023-9999"
+        )
+        score, factors, exp_str = xai.compute_score_explanation(finding)
+        self.assertEqual(factors["severity_weight"], 1.0)
+        self.assertEqual(factors["source_weight"], 0.95)
+        self.assertEqual(factors["confidence"], 1.0)
+        self.assertEqual(score, 95.0)
+        self.assertIn("95.0/100", exp_str)
+
+    def test_xai_fallback_on_llm_failure(self):
+        """8. Fallback behavior when XAI processing fails."""
+        async def run_test():
+            finding = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="Insecure MD5 Hash",
+                description="MD5 hashing algorithm detected.",
+                file="crypto.py",
+                line_start=5,
+                line_end=5,
+                confidence=0.9,
+                rule_id="python.lang.security.insecure-hash.md5"
+            )
+            with patch("scanner_llm._call_llm", AsyncMock(side_effect=Exception("LLM down"))):
+                res = await xai.generate_structured_explanation(finding)
+                self.assertIn("Insecure MD5 Hash", res["explanation"])
+                self.assertIn("Remediation", res["explanation"])
+                self.assertTrue(len(res["token_attributions"]) > 0)
+        asyncio.run(run_test())
+
+    def test_xai_json_serialization(self):
+        """9. JSON serialization."""
+        async def run_test():
+            finding = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.medium,
+                title="Test Serialization",
+                description="Testing JSON dump",
+                file="test.py",
+                line_start=1,
+                line_end=2,
+                confidence=0.8
+            )
+            res = await xai.generate_structured_explanation(finding)
+            from models import ExplainResponse
+            resp_model = ExplainResponse(
+                finding_id="123",
+                explanation=res["explanation"],
+                token_attributions=res["token_attributions"],
+                highlighted_lines=res["highlighted_lines"],
+                rule_id=res["rule_id"],
+                severity=res["severity"],
+                risk_score=res["risk_score"],
+                score_factors=res["score_factors"],
+                evidence_snippet=res["evidence_snippet"],
+                remediation_rationale=res["remediation_rationale"]
+            )
+            serialized = resp_model.model_dump_json()
+            parsed = json.loads(serialized)
+            self.assertEqual(parsed["finding_id"], "123")
+            self.assertEqual(parsed["severity"], "medium")
+        asyncio.run(run_test())
+
+    def test_xai_compatibility_with_canonical_finding(self):
+        """10. Compatibility with canonical Finding schema (3-tuple output)."""
+        async def run_test():
+            finding = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="SQL Injection",
+                description="Unescaped SQL query",
+                file="app.py",
+                line_start=10,
+                line_end=12,
+                confidence=0.9
+            )
+            exp_text, attrs, highlighted = await xai.generate_explanation(finding, "query = 'SELECT *'")
+            self.assertIsInstance(exp_text, str)
+            self.assertIsInstance(attrs, list)
+            self.assertIsInstance(highlighted, list)
         asyncio.run(run_test())
 
 

@@ -245,8 +245,8 @@ async def review_repo(req: RepoReviewRequest):
 @app.post("/explain", response_model=ExplainResponse)
 async def explain_finding(req: ExplainRequest):
     """
-    Explain a finding with XAI — generates human-readable explanation
-    and token-level attributions.
+    Explain a finding with XAI — generates human-readable explanation,
+    evidence snippet, risk score breakdown, and token attributions.
     """
     logger.info("POST /explain — finding_id=%s", req.finding_id)
 
@@ -255,17 +255,19 @@ async def explain_finding(req: ExplainRequest):
     if not finding:
         raise HTTPException(status_code=404, detail=f"Finding {req.finding_id} not found in cache.")
 
-    # Use the LLM-based explanation or XAI module
-    explanation, attributions, highlighted = await xai.generate_explanation(
-        finding,
-        code_context=finding.description,  # Ideally we'd have the full file cached
-    )
+    res = await xai.generate_structured_explanation(finding)
 
     return ExplainResponse(
         finding_id=req.finding_id,
-        explanation=explanation,
-        token_attributions=attributions,
-        highlighted_lines=highlighted,
+        explanation=res["explanation"],
+        token_attributions=res.get("token_attributions", []),
+        highlighted_lines=res.get("highlighted_lines", []),
+        rule_id=res.get("rule_id"),
+        severity=res.get("severity"),
+        risk_score=res.get("risk_score"),
+        score_factors=res.get("score_factors"),
+        evidence_snippet=res.get("evidence_snippet"),
+        remediation_rationale=res.get("remediation_rationale"),
     )
 
 

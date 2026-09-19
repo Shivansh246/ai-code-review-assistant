@@ -112,6 +112,12 @@ class ExplainResponse(BaseModel):
     explanation: str
     token_attributions: Optional[list[TokenAttribution]] = None
     highlighted_lines: list[int] = []
+    rule_id: Optional[str] = None
+    severity: Optional[str] = None
+    risk_score: Optional[float] = None
+    score_factors: Optional[dict[str, float]] = None
+    evidence_snippet: Optional[str] = None
+    remediation_rationale: Optional[str] = None
 
 
 # ── Request / Response: /fix ──────────────────────────────────────────────────
