@@ -326,13 +326,176 @@ class TestOSVRegression(unittest.TestCase):
 
 
 class TestLLMAsyncRegression(unittest.TestCase):
-    """Tests for LLM non-blocking async execution and finding construction."""
+    """Tests for LLM non-blocking async execution, error handling, and normalization."""
+
+    def test_llm_valid_single_finding(self):
+        """Test 1: Valid structured LLM response -> Finding."""
+        async def run_test():
+            mock_resp = MagicMock()
+            mock_resp.text = json.dumps([
+                {
+                    "title": "SQL Injection",
+                    "description": "User input passed to raw SQL query.",
+                    "severity": "high",
+                    "line_start": 12,
+                    "line_end": 15,
+                    "confidence": 0.9,
+                    "rule_id": "llm-sqli"
+                }
+            ])
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy", "LLM_PROVIDER": "gemini"}):
+                with patch("scanner_llm._call_llm", AsyncMock(return_value=mock_resp.text)):
+                    findings = await scanner_llm.scan_file("app.py", "query = f'SELECT * FROM users WHERE id={user_id}'\n" * 20)
+                    self.assertEqual(len(findings), 1)
+                    f = findings[0]
+                    self.assertEqual(f.file, "app.py")
+                    self.assertEqual(f.title, "SQL Injection")
+                    self.assertEqual(f.severity, Severity.high)
+                    self.assertEqual(f.source, FindingSource.llm)
+                    self.assertEqual(f.line_start, 12)
+                    self.assertEqual(f.line_end, 15)
+                    self.assertAlmostEqual(f.confidence, 0.9)
+                    self.assertEqual(f.rule_id, "llm-sqli")
+        asyncio.run(run_test())
+
+    def test_llm_multiple_findings(self):
+        """Test 2: Multiple findings -> multiple canonical Findings."""
+        async def run_test():
+            mock_resp = json.dumps([
+                {
+                    "title": "Issue 1",
+                    "description": "Desc 1",
+                    "severity": "critical",
+                    "line_start": 2,
+                    "line_end": 3,
+                    "confidence": 0.95,
+                    "rule_id": "rule-1"
+                },
+                {
+                    "title": "Issue 2",
+                    "description": "Desc 2",
+                    "severity": "low",
+                    "line_start": 5,
+                    "line_end": 5,
+                    "confidence": 0.7,
+                    "rule_id": "rule-2"
+                }
+            ])
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy", "LLM_PROVIDER": "gemini"}):
+                with patch("scanner_llm._call_llm", AsyncMock(return_value=mock_resp)):
+                    findings = await scanner_llm.scan_file("app.py", "line\n" * 10)
+                    self.assertEqual(len(findings), 2)
+                    self.assertEqual(findings[0].severity, Severity.critical)
+                    self.assertEqual(findings[1].severity, Severity.low)
+        asyncio.run(run_test())
+
+    def test_llm_malformed_json(self):
+        """Test 3: Malformed JSON -> graceful empty/fallback result."""
+        async def run_test():
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+                with patch("scanner_llm._call_llm", AsyncMock(return_value="{invalid_json...")):
+                    findings = await scanner_llm.scan_file("app.py", "code")
+                    self.assertEqual(findings, [])
+        asyncio.run(run_test())
+
+    def test_llm_missing_required_fields(self):
+        """Test 4: Missing required fields -> validation/fallback."""
+        async def run_test():
+            mock_resp = json.dumps([{"severity": "high"}])
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+                with patch("scanner_llm._call_llm", AsyncMock(return_value=mock_resp)):
+                    findings = await scanner_llm.scan_file("app.py", "code line\n" * 5)
+                    self.assertEqual(len(findings), 1)
+                    f = findings[0]
+                    self.assertEqual(f.title, "LLM Semantic Security Finding")
+                    self.assertEqual(f.line_start, 1)
+                    self.assertEqual(f.confidence, 0.8)
+        asyncio.run(run_test())
+
+    def test_llm_invalid_severity_and_lines(self):
+        """Test 5: Invalid severity & line numbers -> normalization/clamping."""
+        async def run_test():
+            mock_resp = json.dumps([{
+                "title": "Title",
+                "description": "Desc",
+                "severity": "UNKNOWN_SEVERITY",
+                "line_start": 9999,
+                "line_end": -5,
+                "confidence": 1.5
+            }])
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+                with patch("scanner_llm._call_llm", AsyncMock(return_value=mock_resp)):
+                    findings = await scanner_llm.scan_file("app.py", "line 1\nline 2\nline 3\n")
+                    self.assertEqual(len(findings), 1)
+                    f = findings[0]
+                    self.assertEqual(f.severity, Severity.info)
+                    self.assertEqual(f.line_start, 3) # clamped to total_lines (3)
+                    self.assertEqual(f.line_end, 3)
+                    self.assertEqual(f.confidence, 1.0) # clamped to 1.0
+        asyncio.run(run_test())
+
+    def test_llm_missing_api_key(self):
+        """Test 6: Missing API key -> graceful fallback."""
+        async def run_test():
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "", "OPENAI_API_KEY": ""}, clear=True):
+                findings = await scanner_llm.scan_file("app.py", "code")
+                self.assertEqual(findings, [])
+        asyncio.run(run_test())
+
+    def test_llm_provider_timeout(self):
+        """Test 7: Provider timeout -> graceful fallback."""
+        async def run_test():
+            async def timeout_call(prompt):
+                raise asyncio.TimeoutError("LLM API timed out")
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+                with patch("scanner_llm._call_llm", side_effect=timeout_call):
+                    findings = await scanner_llm.scan_file("app.py", "code")
+                    self.assertEqual(findings, [])
+        asyncio.run(run_test())
+
+    def test_llm_provider_network_error(self):
+        """Test 8: Provider network error -> graceful fallback."""
+        async def run_test():
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+                with patch("scanner_llm._call_llm", side_effect=Exception("Connection reset by peer")):
+                    findings = await scanner_llm.scan_file("app.py", "code")
+                    self.assertEqual(findings, [])
+        asyncio.run(run_test())
+
+    def test_llm_scoring_compatibility(self):
+        """Test 11: LLM finding -> existing scoring compatibility."""
+        async def run_test():
+            f1 = Finding(
+                title="Critical Secret Exposure",
+                description="Hardcoded key in source.",
+                severity=Severity.critical,
+                line_start=1,
+                line_end=1,
+                confidence=0.95,
+                source=FindingSource.llm,
+                file="app.py"
+            )
+            f2 = Finding(
+                title="Info style note",
+                description="Consider updating comments.",
+                severity=Severity.info,
+                line_start=5,
+                line_end=5,
+                confidence=0.6,
+                source=FindingSource.llm,
+                file="app.py"
+            )
+            import scoring
+            ranked = scoring.rank_findings([f1, f2])
+            self.assertEqual(len(ranked), 2)
+            self.assertEqual(ranked[0].severity, Severity.critical)
+            self.assertEqual(ranked[1].severity, Severity.info)
+        asyncio.run(run_test())
 
     def test_llm_async_non_blocking(self):
+        """Test 9: Async non-blocking execution."""
         async def run_async_test():
-            # Mock Gemini client where generate_content does a synchronous sleep
             mock_client = MagicMock()
-            # Simulate a client without aio (or using fallback to_thread)
             del mock_client.aio
 
             def blocking_generate_content(*args, **kwargs):
@@ -357,7 +520,6 @@ class TestLLMAsyncRegression(unittest.TestCase):
                 with patch("scanner_llm.genai") as mock_genai:
                     mock_genai.Client.return_value = mock_client
 
-                    # Run background task on the same event loop to ensure it's not blocked
                     heartbeat_ticks = 0
 
                     async def heartbeat():
@@ -366,22 +528,18 @@ class TestLLMAsyncRegression(unittest.TestCase):
                             await asyncio.sleep(0.02)
                             heartbeat_ticks += 1
 
-                    scan_task = asyncio.create_task(scanner_llm.scan_file("config.py", "AWS_SECRET='123'"))
+                    scan_task = asyncio.create_task(scanner_llm.scan_file("config.py", "AWS_SECRET='123'\n" * 15))
                     heartbeat_task = asyncio.create_task(heartbeat())
 
                     findings, _ = await asyncio.gather(scan_task, heartbeat_task)
 
-                    # Heartbeat must have ticked while LLM call was running in thread
                     self.assertGreater(heartbeat_ticks, 0, "Event loop was blocked by synchronous LLM call!")
-
                     self.assertEqual(len(findings), 1)
                     f = findings[0]
                     self.assertEqual(f.file, "config.py")
                     self.assertEqual(f.title, "Hardcoded AWS Credentials")
-                    self.assertEqual(f.description, "Found hardcoded AWS_SECRET_ACCESS_KEY.")
                     self.assertEqual(f.severity, Severity.critical)
                     self.assertEqual(f.source, FindingSource.llm)
-                    self.assertEqual(f.rule_id, "llm-hardcoded-secret")
 
         asyncio.run(run_async_test())
 

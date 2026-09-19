@@ -91,68 +91,124 @@ async def _call_llm(prompt: str) -> str:
             return ""
 
 async def scan_file(file_path: str, content: str) -> List[Finding]:
-    prompt = f"""
-Perform a semantic security code analysis on the following code snippet from the file `{file_path}`.
-Identify any security vulnerabilities, bugs, or bad practices.
+    if not content or not content.strip():
+        return []
 
-Return the results ONLY as a valid JSON array of objects. Do not include any other text.
-Each object in the array must have the following fields:
-- "title": a short title for the finding
-- "description": a detailed description of the issue
+    lines = content.splitlines()
+    total_lines = max(1, len(lines))
+
+    prompt = f"""You are an expert static application security testing (SAST) auditor.
+Perform a rigorous semantic security code analysis on the code snippet from `{file_path}`.
+
+Analyze for:
+- Data flow & user-controlled input reaching dangerous sinks
+- Authentication & authorization flaws
+- Injection vulnerabilities (SQLi, Command Injection, Code Injection)
+- Insecure deserialization
+- Sensitive data exposure & hardcoded credentials/secrets
+- Cryptographic misuse
+- Server-Side Request Forgery (SSRF)
+- Path traversal & insecure file operations
+- Unsafe subprocess / command execution
+- Logic or access control flaws
+
+Requirements:
+- Only report genuine security issues backed by clear code evidence.
+- Do NOT report stylistic or performance issues unless they have direct security implications.
+- Distinguish actual vulnerabilities from suspicious but safe code.
+- Return ONLY a valid JSON array of objects without markdown formatting or preamble/postscript.
+
+Each object MUST contain:
+- "title": concise, descriptive security title (string)
+- "description": clear explanation of why it is vulnerable and how data flows (string)
 - "severity": one of "critical", "high", "medium", "low", "info"
-- "line_start": the line number where the issue starts
-- "line_end": the line number where the issue ends
-- "confidence": a float between 0.0 and 1.0 representing your confidence in the finding
-- "rule_id": (optional) an identifier for the rule or type of issue
+- "line_start": 1-indexed starting line number of the vulnerability (integer between 1 and {total_lines})
+- "line_end": 1-indexed ending line number of the vulnerability (integer between 1 and {total_lines})
+- "confidence": float between 0.0 and 1.0 (e.g. 0.85)
+- "rule_id": string identifier for the vulnerability class (e.g. "llm-sqli", "llm-hardcoded-secret")
 
-Code:
+Code to analyze:
 ```
 {content}
 ```
 """
-    response_text = await _call_llm(prompt)
+    try:
+        response_text = await _call_llm(prompt)
+    except Exception as e:
+        logger.error(f"Error calling LLM provider: {e}")
+        return []
+
     if not response_text:
         return []
-        
+
     cleaned_json = _clean_json_response(response_text)
-    
+
     try:
         data = json.loads(cleaned_json)
         if not isinstance(data, list):
-            # Sometimes LLM returns a single object instead of array
             if isinstance(data, dict):
                 data = [data]
             else:
                 logger.error("LLM returned JSON that is not an array or object.")
                 return []
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse LLM JSON response: {e}. Raw response: {response_text}")
+        logger.error(f"Failed to parse LLM JSON response: {e}. Raw response snippet: {cleaned_json[:200]}")
         return []
 
     findings = []
     for item in data:
+        if not isinstance(item, dict):
+            continue
+
         try:
-            severity_str = item.get("severity", "info").lower()
+            # 1. Normalize severity
+            sev_raw = str(item.get("severity", "info")).strip().lower()
             try:
-                severity = Severity(severity_str)
+                severity = Severity(sev_raw)
             except ValueError:
                 severity = Severity.info
 
+            # 2. Validate and clamp line numbers
+            try:
+                l_start = int(item.get("line_start", 1))
+            except (ValueError, TypeError):
+                l_start = 1
+
+            try:
+                l_end = int(item.get("line_end", l_start))
+            except (ValueError, TypeError):
+                l_end = l_start
+
+            l_start = max(1, min(total_lines, l_start))
+            l_end = max(l_start, min(total_lines, l_end))
+
+            # 3. Validate and clamp confidence
+            try:
+                conf = float(item.get("confidence", 0.8))
+            except (ValueError, TypeError):
+                conf = 0.8
+            conf = max(0.0, min(1.0, conf))
+
+            # 4. Mandatory title and description
+            title = str(item.get("title", "")).strip() or "LLM Semantic Security Finding"
+            description = str(item.get("description", "")).strip() or "Potential security issue detected by LLM semantic scanner."
+            rule_id = str(item.get("rule_id", "")).strip() or "llm-semantic-issue"
+
             finding = Finding(
-                title=item.get("title", "Unknown finding"),
-                description=item.get("description", ""),
+                title=title,
+                description=description,
                 severity=severity,
-                line_start=item.get("line_start", 1),
-                line_end=item.get("line_end", 1),
-                confidence=float(item.get("confidence", 0.8)),
-                rule_id=item.get("rule_id", "llm-semantic-issue"),
+                line_start=l_start,
+                line_end=l_end,
+                confidence=conf,
+                rule_id=rule_id,
                 source=FindingSource.llm,
                 file=file_path
             )
             findings.append(finding)
         except Exception as e:
-            logger.warning(f"Failed to parse a finding item: {e}. Item: {item}")
-            
+            logger.warning(f"Failed to normalize LLM finding item: {e}. Item: {item}")
+
     return findings
 
 async def explain_finding(finding: Finding, code_context: str) -> Tuple[str, List[TokenAttribution], List[int]]:
