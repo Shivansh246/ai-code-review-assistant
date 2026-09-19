@@ -40,44 +40,62 @@ def _parse_cvss_to_severity(cvss_score: float) -> Severity:
     return Severity.info
 
 def _extract_severity(vuln: dict) -> Severity:
-    # Try to find CVSS score first
-    severities = vuln.get("severity", [])
-    for sev in severities:
-        if sev.get("type") in ("CVSS_V3", "CVSS_V4"):
-            # A rough heuristic: check if we can parse the score from the vector string or if a score is provided
-            score_str = sev.get("score", "")
-            # CVSS vectors don't directly give score without calculation, but OSV sometimes provides numeric score
-            # If not, let's rely on database specific tags or fallback
-            pass
+    if not isinstance(vuln, dict):
+        return Severity.info
 
-    # Fallback to checking database specific tags
-    database_specific = vuln.get("database_specific", {})
-    if "severity" in database_specific:
-        return _map_severity(database_specific["severity"])
-    
-    return Severity.high # Default to high if unknown, better safe than sorry for known CVEs
+    # 1. Try database_specific tags
+    database_specific = vuln.get("database_specific")
+    if isinstance(database_specific, dict):
+        sev_str = database_specific.get("severity") or database_specific.get("github_reviewed_severity")
+        if isinstance(sev_str, str) and sev_str.strip():
+            return _map_severity(sev_str.strip())
+
+    # 2. Try ecosystem_specific tags
+    ecosystem_specific = vuln.get("ecosystem_specific")
+    if isinstance(ecosystem_specific, dict):
+        sev_str = ecosystem_specific.get("severity")
+        if isinstance(sev_str, str) and sev_str.strip():
+            return _map_severity(sev_str.strip())
+
+    # 3. Try severity array (CVSS score check)
+    severities = vuln.get("severity")
+    if isinstance(severities, list):
+        for sev in severities:
+            if isinstance(sev, dict):
+                score_val = sev.get("score")
+                if isinstance(score_val, (int, float)):
+                    return _parse_cvss_to_severity(float(score_val))
+
+    return Severity.high
 
 def _parse_package_json(content: str) -> List[Dict[str, str]]:
     deps = []
+    if not content or not content.strip():
+        return deps
     try:
         data = json.loads(content)
+        if not isinstance(data, dict):
+            return deps
         for section in ["dependencies", "devDependencies", "peerDependencies"]:
-            if section in data:
-                for name, version in data[section].items():
-                    # Strip common specifiers to get base version, very naive
-                    clean_version = re.sub(r'^[~^><=]+', '', version).strip()
-                    deps.append({
-                        "package": {"name": name, "ecosystem": "npm"},
-                        "version": clean_version
-                    })
+            section_data = data.get(section)
+            if isinstance(section_data, dict):
+                for name, version in section_data.items():
+                    if isinstance(name, str) and isinstance(version, str):
+                        clean_version = re.sub(r'^[~^><=]+', '', version).strip()
+                        if clean_version:
+                            deps.append({
+                                "package": {"name": name, "ecosystem": "npm"},
+                                "version": clean_version
+                            })
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse package.json: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error parsing package.json: {e}")
     return deps
 
 def _parse_requirements_txt(content: str) -> List[Dict[str, str]]:
     deps = []
-    # Match package==version, ignore comments and extras
-    pattern = re.compile(r'^([a-zA-Z0-9_\-]+)(?:\[.*\])?==([a-zA-Z0-9_\.\-]+)')
+    pattern = re.compile(r'^\s*([a-zA-Z0-9_\-\.]+)\s*(?:\[.*\])?\s*==\s*([a-zA-Z0-9_\.\-]+)')
     for line in content.splitlines():
         line = line.strip()
         if not line or line.startswith('#'):
@@ -92,7 +110,6 @@ def _parse_requirements_txt(content: str) -> List[Dict[str, str]]:
 
 def _parse_go_mod(content: str) -> List[Dict[str, str]]:
     deps = []
-    # Match basic `require github.com/foo/bar v1.2.3` and `module v1.2.3` within require blocks
     in_require_block = False
     for line in content.splitlines():
         line = line.strip()
@@ -105,15 +122,13 @@ def _parse_go_mod(content: str) -> List[Dict[str, str]]:
             in_require_block = False
             continue
         
-        # single line require or block line
         if in_require_block or line.startswith('require '):
             parts = line.split()
             if line.startswith('require '):
-                parts = parts[1:] # skip 'require'
+                parts = parts[1:]
             if len(parts) >= 2:
                 name = parts[0]
                 version = parts[1]
-                # versions might be like v1.2.3+incompatible, keep as is
                 deps.append({
                     "package": {"name": name, "ecosystem": "Go"},
                     "version": version
@@ -124,7 +139,6 @@ def _parse_pom_xml(content: str) -> List[Dict[str, str]]:
     deps = []
     try:
         root = ET.fromstring(content)
-        # Handle namespaces if any (simplified)
         ns = ""
         m = re.match(r'\{.*\}', root.tag)
         if m:
@@ -137,17 +151,18 @@ def _parse_pom_xml(content: str) -> List[Dict[str, str]]:
             version = dep.find(f"{ns}version")
             
             if group_id is not None and artifact_id is not None and version is not None:
-                g = group_id.text.strip()
-                a = artifact_id.text.strip()
-                v = version.text.strip()
-                # Ignore properties for now (e.g. ${spring.version})
-                if not v.startswith('${'):
+                g = group_id.text.strip() if group_id.text else ""
+                a = artifact_id.text.strip() if artifact_id.text else ""
+                v = version.text.strip() if version.text else ""
+                if g and a and v and not v.startswith('${'):
                     deps.append({
                         "package": {"name": f"{g}:{a}", "ecosystem": "Maven"},
                         "version": v
                     })
     except ET.ParseError as e:
         logger.error(f"Failed to parse pom.xml: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error parsing pom.xml: {e}")
     return deps
 
 async def scan_file(file_path: str, content: str) -> List[Finding]:
@@ -163,30 +178,49 @@ async def scan_file(file_path: str, content: str) -> List[Finding]:
     elif filename == "pom.xml":
         queries = _parse_pom_xml(content)
     else:
-        # Not a supported manifest file
         return []
 
     if not queries:
         return []
 
     findings = []
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        try:
-            # We can use batch API
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             payload = {"queries": queries}
             response = await client.post(OSV_BATCH_QUERY_URL, json=payload)
             response.raise_for_status()
-            results = response.json().get("results", [])
+            res_data = response.json()
+            if not isinstance(res_data, dict):
+                logger.error("OSV API returned non-object JSON response.")
+                return []
+            results = res_data.get("results", [])
+            if not isinstance(results, list):
+                logger.error("OSV API returned non-list results.")
+                return []
             
             for i, result in enumerate(results):
+                if i >= len(queries):
+                    break
+                if not isinstance(result, dict):
+                    continue
                 vulns = result.get("vulns", [])
+                if not isinstance(vulns, list):
+                    continue
                 query = queries[i]
-                pkg_name = query["package"]["name"]
-                pkg_version = query["version"]
+                pkg_name = query.get("package", {}).get("name", "Unknown")
+                pkg_version = query.get("version", "Unknown")
                 
                 for vuln in vulns:
+                    if not isinstance(vuln, dict):
+                        continue
                     vuln_id = vuln.get("id", "UNKNOWN")
-                    summary = vuln.get("summary", vuln.get("details", "No details available."))
+                    db_spec = vuln.get("database_specific") if isinstance(vuln.get("database_specific"), dict) else {}
+                    summary = (
+                        vuln.get("summary")
+                        or vuln.get("details")
+                        or db_spec.get("display_name")
+                        or f"Known vulnerability {vuln_id} affecting {pkg_name} {pkg_version}."
+                    )
                     severity = _extract_severity(vuln)
                     
                     finding = Finding(
@@ -194,7 +228,7 @@ async def scan_file(file_path: str, content: str) -> List[Finding]:
                         line_start=1,
                         line_end=1,
                         title=f"Vulnerability in {pkg_name} ({vuln_id})",
-                        description=summary,
+                        description=str(summary),
                         severity=severity,
                         source=FindingSource.osv,
                         confidence=1.0,
@@ -203,12 +237,14 @@ async def scan_file(file_path: str, content: str) -> List[Finding]:
                         package_version=pkg_version
                     )
                     findings.append(finding)
-        except httpx.RequestError as e:
-            logger.error(f"Network error when querying OSV: {e}")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error from OSV API: {e.response.status_code} - {e.response.text}")
-        except Exception as e:
-            logger.exception(f"Unexpected error querying OSV: {e}")
+    except httpx.TimeoutException as e:
+        logger.warning(f"Timeout querying OSV API for {file_path}: {e}")
+    except httpx.RequestError as e:
+        logger.error(f"Network error when querying OSV: {e}")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error from OSV API: {e.response.status_code} - {e.response.text}")
+    except Exception as e:
+        logger.exception(f"Unexpected error querying OSV: {e}")
             
     return findings
 

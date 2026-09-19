@@ -141,6 +141,43 @@ class TestSemgrepRegression(unittest.TestCase):
 class TestOSVRegression(unittest.TestCase):
     """Tests for OSV manifest parser and vulnerability finding construction."""
 
+    def test_dependency_parsers(self):
+        # Python requirements.txt
+        req_deps = scanner_osv._parse_requirements_txt("jinja2==2.10.1\n  requests[security] == 2.20.0\n# comment\n")
+        self.assertEqual(len(req_deps), 2)
+        self.assertEqual(req_deps[0]["package"]["name"], "jinja2")
+        self.assertEqual(req_deps[0]["version"], "2.10.1")
+        self.assertEqual(req_deps[1]["package"]["name"], "requests")
+        self.assertEqual(req_deps[1]["version"], "2.20.0")
+
+        # npm package.json
+        pkg_json = json.dumps({
+            "dependencies": {"lodash": "^4.17.11"},
+            "devDependencies": {"mocha": "~8.0.0"}
+        })
+        npm_deps = scanner_osv._parse_package_json(pkg_json)
+        self.assertEqual(len(npm_deps), 2)
+        self.assertEqual(npm_deps[0]["package"]["name"], "lodash")
+        self.assertEqual(npm_deps[0]["version"], "4.17.11")
+
+        # Go go.mod
+        go_mod = "module example.com/app\nrequire (\n\tgithub.com/gin-gonic/gin v1.6.0\n)\n"
+        go_deps = scanner_osv._parse_go_mod(go_mod)
+        self.assertEqual(len(go_deps), 1)
+        self.assertEqual(go_deps[0]["package"]["name"], "github.com/gin-gonic/gin")
+        self.assertEqual(go_deps[0]["version"], "v1.6.0")
+
+        # Maven pom.xml
+        pom_xml = """<project><dependencies><dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.9</version>
+        </dependency></dependencies></project>"""
+        pom_deps = scanner_osv._parse_pom_xml(pom_xml)
+        self.assertEqual(len(pom_deps), 1)
+        self.assertEqual(pom_deps[0]["package"]["name"], "org.apache.commons:commons-text")
+        self.assertEqual(pom_deps[0]["version"], "1.9")
+
     def test_osv_parser_canonical_fields(self):
         fake_osv_response = {
             "results": [
@@ -185,6 +222,107 @@ class TestOSVRegression(unittest.TestCase):
                 self.assertEqual(f.confidence, 1.0)
 
         asyncio.run(run_osv_test())
+
+    def test_osv_no_vulnerabilities(self):
+        fake_osv_response = {"results": [{"vulns": []}]}
+
+        async def run_test():
+            with patch("httpx.AsyncClient.post") as mock_post:
+                mock_resp = AsyncMock()
+                mock_resp.status_code = 200
+                mock_resp.raise_for_status = lambda: None
+                mock_resp.json = lambda: fake_osv_response
+                mock_post.return_value = mock_resp
+
+                findings = await scanner_osv.scan_file("requirements.txt", "safe-pkg==1.0.0")
+                self.assertEqual(findings, [])
+
+        asyncio.run(run_test())
+
+    def test_osv_malformed_dependency_input(self):
+        async def run_test():
+            # Malformed JSON for package.json
+            findings_pkg = await scanner_osv.scan_file("package.json", "{invalid_json")
+            self.assertEqual(findings_pkg, [])
+
+            # Malformed XML for pom.xml
+            findings_pom = await scanner_osv.scan_file("pom.xml", "<unclosed_tag>")
+            self.assertEqual(findings_pom, [])
+
+            # Unsupported file
+            findings_other = await scanner_osv.scan_file("script.py", "import os")
+            self.assertEqual(findings_other, [])
+
+        asyncio.run(run_test())
+
+    def test_osv_malformed_api_response(self):
+        async def run_test():
+            with patch("httpx.AsyncClient.post") as mock_post:
+                mock_resp = AsyncMock()
+                mock_resp.status_code = 200
+                mock_resp.raise_for_status = lambda: None
+                mock_resp.json = lambda: {"results": "invalid_results_type"}
+                mock_post.return_value = mock_resp
+
+                findings = await scanner_osv.scan_file("requirements.txt", "jinja2==2.10.1")
+                self.assertEqual(findings, [])
+
+        asyncio.run(run_test())
+
+    def test_osv_network_failure_and_timeout(self):
+        async def run_test():
+            import httpx
+            with patch("httpx.AsyncClient.post", side_effect=httpx.TimeoutException("OSV timeout")):
+                findings_timeout = await scanner_osv.scan_file("requirements.txt", "jinja2==2.10.1")
+                self.assertEqual(findings_timeout, [])
+
+            with patch("httpx.AsyncClient.post", side_effect=httpx.RequestError("Connection refused")):
+                findings_err = await scanner_osv.scan_file("requirements.txt", "jinja2==2.10.1")
+                self.assertEqual(findings_err, [])
+
+        asyncio.run(run_test())
+
+    def test_osv_scoring_compatibility(self):
+        async def run_test():
+            fake_osv_response = {
+                "results": [
+                    {
+                        "vulns": [
+                            {
+                                "id": "GHSA-1234-5678",
+                                "summary": "High vuln in pkg-a",
+                                "database_specific": {"severity": "HIGH"}
+                            },
+                            {
+                                "id": "GHSA-8765-4321",
+                                "summary": "Low vuln in pkg-a",
+                                "database_specific": {"severity": "LOW"}
+                            }
+                        ]
+                    }
+                ]
+            }
+            with patch("httpx.AsyncClient.post") as mock_post:
+                mock_resp = AsyncMock()
+                mock_resp.status_code = 200
+                mock_resp.raise_for_status = lambda: None
+                mock_resp.json = lambda: fake_osv_response
+                mock_post.return_value = mock_resp
+
+                findings = await scanner_osv.scan_file("requirements.txt", "pkg-a==1.0.0")
+                self.assertEqual(len(findings), 2)
+
+                import scoring
+                ranked = scoring.rank_findings(findings)
+                self.assertEqual(len(ranked), 2)
+                self.assertEqual(ranked[0].severity, Severity.high)
+                self.assertEqual(ranked[1].severity, Severity.low)
+                self.assertGreater(
+                    scoring.finding_risk_scores[ranked[0].id],
+                    scoring.finding_risk_scores[ranked[1].id]
+                )
+
+        asyncio.run(run_test())
 
 
 class TestLLMAsyncRegression(unittest.TestCase):
