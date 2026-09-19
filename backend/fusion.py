@@ -88,11 +88,22 @@ async def fuse_findings(findings: List[Finding]) -> List[Finding]:
             if existing.file == finding.file:
                 existing_rule = getattr(existing, 'rule_id', None)
                 finding_rule = getattr(finding, 'rule_id', None)
+                existing_cve = getattr(existing, 'cve_id', None)
+                finding_cve = getattr(finding, 'cve_id', None)
                 
-                # Same file AND same rule_id
-                if existing_rule and finding_rule and existing_rule == finding_rule:
-                    is_duplicate = True
-                # Same file AND overlapping line ranges AND similar titles
+                # Rule 1 & 2: Explicit ID check (CVE IDs take priority, then Rule IDs)
+                if existing_cve and finding_cve:
+                    if existing_cve == finding_cve:
+                        is_duplicate = True
+                    else:
+                        is_duplicate = False
+                elif existing_rule and finding_rule:
+                    if existing_rule == finding_rule:
+                        if _overlap_ranges(existing, finding) or (existing.line_start == 1 and existing.line_end == 1 and finding.line_start == 1 and finding.line_end == 1):
+                            is_duplicate = True
+                    else:
+                        is_duplicate = False
+                # Rule 3: Cross-source or missing IDs (e.g. LLM + Semgrep)
                 elif _overlap_ranges(existing, finding) and _similar_titles(existing.title, finding.title):
                     is_duplicate = True
             

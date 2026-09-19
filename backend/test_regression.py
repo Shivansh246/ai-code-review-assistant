@@ -389,8 +389,97 @@ class TestLLMAsyncRegression(unittest.TestCase):
 class TestFusionRegression(unittest.TestCase):
     """Tests for Finding deduplication and fusion using canonical fields."""
 
-    def test_fusion_canonical_fields(self):
-        async def run_fusion_test():
+    def test_case1_exact_duplicate(self):
+        """Case 1: Exact duplicate -> 1 fused finding."""
+        async def run_test():
+            f1 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="Use of MD5 hash",
+                description="Insecure hash algorithm MD5 used.",
+                file="app.py",
+                line_start=10,
+                line_end=10,
+                confidence=0.8,
+                rule_id="python.lang.security.insecure-hash.md5"
+            )
+            f2 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="Use of MD5 hash",
+                description="Insecure hash algorithm MD5 used.",
+                file="app.py",
+                line_start=10,
+                line_end=10,
+                confidence=0.8,
+                rule_id="python.lang.security.insecure-hash.md5"
+            )
+            fused = await fusion.fuse_findings([f1, f2])
+            self.assertEqual(len(fused), 1)
+            self.assertEqual(fused[0].source, FindingSource.fused)
+        asyncio.run(run_test())
+
+    def test_case2_same_file_different_rule_ids(self):
+        """Case 2: Same file, different rule IDs -> 2 separate findings."""
+        async def run_test():
+            f1 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="Insecure MD5",
+                description="MD5 hash used.",
+                file="app.py",
+                line_start=10,
+                line_end=10,
+                confidence=0.8,
+                rule_id="rule-md5"
+            )
+            f2 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.critical,
+                title="SQL Injection",
+                description="Raw query formatting.",
+                file="app.py",
+                line_start=50,
+                line_end=52,
+                confidence=0.9,
+                rule_id="rule-sqli"
+            )
+            fused = await fusion.fuse_findings([f1, f2])
+            self.assertEqual(len(fused), 2)
+        asyncio.run(run_test())
+
+    def test_case3_same_line_different_rule_ids(self):
+        """Case 3: Same line, different rule IDs -> 2 separate findings."""
+        async def run_test():
+            f1 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.medium,
+                title="Hardcoded Password",
+                description="Hardcoded password string.",
+                file="app.py",
+                line_start=15,
+                line_end=15,
+                confidence=0.85,
+                rule_id="rule-password"
+            )
+            f2 = Finding(
+                source=FindingSource.semgrep,
+                severity=Severity.high,
+                title="Hardcoded API Token",
+                description="Hardcoded secret token.",
+                file="app.py",
+                line_start=15,
+                line_end=15,
+                confidence=0.9,
+                rule_id="rule-api-token"
+            )
+            fused = await fusion.fuse_findings([f1, f2])
+            self.assertEqual(len(fused), 2)
+        asyncio.run(run_test())
+
+    def test_case4_same_vulnerability_two_sources(self):
+        """Case 4: Same vulnerability from 2 sources (Semgrep + LLM mock) -> 1 fused finding."""
+        async def run_test():
             f1 = Finding(
                 source=FindingSource.semgrep,
                 severity=Severity.medium,
@@ -413,10 +502,8 @@ class TestFusionRegression(unittest.TestCase):
                 confidence=0.9,
                 rule_id="sec-sql-01"
             )
-
             fused = await fusion.fuse_findings([f1, f2])
             self.assertEqual(len(fused), 1)
-
             mf = fused[0]
             self.assertEqual(mf.file, "app/main.py")
             self.assertEqual(mf.source, FindingSource.fused)
@@ -426,8 +513,73 @@ class TestFusionRegression(unittest.TestCase):
             self.assertEqual(mf.line_end, 24)
             self.assertIn("Semgrep detected", mf.description)
             self.assertIn("LLM detected", mf.description)
+        asyncio.run(run_test())
 
-        asyncio.run(run_fusion_test())
+    def test_case5_osv_package_vulnerabilities_distinct_ghsa(self):
+        """Case 5: OSV package vulnerabilities (different GHSA IDs on same package) -> 26 separate findings (not merged into 3)."""
+        async def run_test():
+            findings = []
+            for i in range(1, 27):
+                findings.append(Finding(
+                    source=FindingSource.osv,
+                    severity=Severity.high,
+                    title=f"Vulnerability in jinja2 (GHSA-xxxx-{i:04d})",
+                    description=f"Vulnerability details {i}",
+                    file="requirements.txt",
+                    line_start=1,
+                    line_end=1,
+                    confidence=1.0,
+                    cve_id=f"GHSA-xxxx-{i:04d}",
+                    package_name="jinja2" if i <= 10 else ("requests" if i <= 21 else "flask"),
+                    package_version="2.10.1"
+                ))
+            fused = await fusion.fuse_findings(findings)
+            self.assertEqual(len(fused), 26)
+        asyncio.run(run_test())
+
+    def test_case6_metadata_preservation(self):
+        """Case 6: Metadata preservation (file, line_start, line_end, severity, confidence, rule_id, cve_id, package_name, package_version, merged description)."""
+        async def run_test():
+            f1 = Finding(
+                source=FindingSource.osv,
+                severity=Severity.medium,
+                title="Vulnerability in requests (GHSA-req-01)",
+                description="OSV finding report",
+                file="requirements.txt",
+                line_start=1,
+                line_end=1,
+                confidence=0.8,
+                cve_id="GHSA-req-01",
+                package_name="requests",
+                package_version="2.20.0"
+            )
+            f2 = Finding(
+                source=FindingSource.llm,
+                severity=Severity.critical,
+                title="Vulnerability in requests (GHSA-req-01)",
+                description="LLM verification of vulnerability",
+                file="requirements.txt",
+                line_start=1,
+                line_end=1,
+                confidence=0.95,
+                cve_id="GHSA-req-01",
+                package_name="requests",
+                package_version="2.20.0"
+            )
+            fused = await fusion.fuse_findings([f1, f2])
+            self.assertEqual(len(fused), 1)
+            mf = fused[0]
+            self.assertEqual(mf.file, "requirements.txt")
+            self.assertEqual(mf.line_start, 1)
+            self.assertEqual(mf.line_end, 1)
+            self.assertEqual(mf.severity, Severity.critical)
+            self.assertAlmostEqual(mf.confidence, 0.99, places=2)
+            self.assertEqual(mf.cve_id, "GHSA-req-01")
+            self.assertEqual(mf.package_name, "requests")
+            self.assertEqual(mf.package_version, "2.20.0")
+            self.assertIn("OSV finding report", mf.description)
+            self.assertIn("LLM verification of vulnerability", mf.description)
+        asyncio.run(run_test())
 
 
 if __name__ == "__main__":
