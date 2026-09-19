@@ -1,0 +1,187 @@
+{
+  "name": "ai-code-review",
+  "displayName": "AI Code Review Assistant",
+  "description": "VS Code security review with static analysis, LLM semantic checks, dependency CVEs, risk scoring, voice commands, adaptive feedback, and explainable findings.",
+  "version": "0.1.0",
+  "publisher": "pratik",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other", "Linters", "Machine Learning"],
+  "keywords": ["security", "code review", "voice", "AI", "static analysis"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiReview.reviewFile",
+        "title": "AI Review: Review Current File",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "aiReview.reviewRepo",
+        "title": "AI Review: Review Repository",
+        "icon": "$(search)"
+      },
+      {
+        "command": "aiReview.explainFinding",
+        "title": "AI Review: Explain Finding",
+        "icon": "$(info)"
+      },
+      {
+        "command": "aiReview.showCritical",
+        "title": "AI Review: Show Critical Findings",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "aiReview.generateFix",
+        "title": "AI Review: Generate Fix",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "aiReview.startVoice",
+        "title": "AI Review: Start Voice Command",
+        "icon": "$(mic)"
+      },
+      {
+        "command": "aiReview.stopVoice",
+        "title": "AI Review: Stop Voice",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "aiReview.acceptFinding",
+        "title": "AI Review: Accept Finding",
+        "icon": "$(check)"
+      },
+      {
+        "command": "aiReview.rejectFinding",
+        "title": "AI Review: Reject Finding",
+        "icon": "$(x)"
+      },
+      {
+        "command": "aiReview.openPanel",
+        "title": "AI Review: Open Review Panel",
+        "icon": "$(eye)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "aiReview.reviewFile",
+          "group": "aiReview@1"
+        },
+        {
+          "command": "aiReview.explainFinding",
+          "group": "aiReview@2"
+        },
+        {
+          "command": "aiReview.generateFix",
+          "group": "aiReview@3"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "aiReview.reviewFile",
+          "group": "navigation",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "aiReview.startVoice",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "aiReview.findingsView",
+          "name": "AI Security Findings",
+          "icon": "$(shield)",
+          "contextualTitle": "AI Code Review"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiReview",
+          "title": "AI Code Review",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Code Review",
+      "properties": {
+        "aiReview.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "URL of the AI Code Review backend (FastAPI)"
+        },
+        "aiReview.enableVoice": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable voice command integration"
+        },
+        "aiReview.wakeWord": {
+          "type": "string",
+          "default": "review",
+          "description": "Wake word to activate voice pipeline"
+        },
+        "aiReview.vadThreshold": {
+          "type": "number",
+          "default": 0.5,
+          "description": "Voice Activity Detection confidence threshold (0.0–1.0)"
+        },
+        "aiReview.autoReviewOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run review when a file is saved"
+        },
+        "aiReview.showInlineDecorations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline severity decorations in the editor"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "aiReview.reviewFile",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      },
+      {
+        "command": "aiReview.startVoice",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v"
+      },
+      {
+        "command": "aiReview.showCritical",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/test-electron": "^2.3.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
