@@ -1,0 +1,1002 @@
+[
+    {
+        "audio": "explain the vulnerability",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "reject this finding",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "print('Starting background task...')",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "reject this finding",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "accept this finding",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "review this code",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "Today's weather is sunny with a chance of rain.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "explain the vulnerability",
+        "code": "<h1>Hello World</h1>",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "def add(a, b):\n    return a + b",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
+        "label": 1
+    },
+    {
+        "audio": "show critical findings",
+        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
+        "label": 1
+    },
+    {
+        "audio": "review this code",
+        "code": "Grocery list: milk, eggs, bread.",
+        "label": 0
+    },
+    {
+        "audio": "fix this bug",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "show critical findings",
+        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+        "label": 0
+    },
+    {
+        "audio": "accept this finding",
+        "code": "The quick brown fox jumps over the lazy dog.",
+        "label": 0
+    }
+]

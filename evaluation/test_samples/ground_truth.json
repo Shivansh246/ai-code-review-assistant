@@ -1,0 +1,114 @@
+[
+  {
+    "file": "vulnerable_app.py",
+    "title": "Hardcoded Credentials",
+    "severity": "high",
+    "line_start": 11,
+    "line_end": 12,
+    "category": "hardcoded_credentials"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "SQL Injection",
+    "severity": "critical",
+    "line_start": 19,
+    "line_end": 21,
+    "category": "sql_injection"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "Command Injection",
+    "severity": "critical",
+    "line_start": 28,
+    "line_end": 29,
+    "category": "command_injection"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "Insecure Deserialization",
+    "severity": "critical",
+    "line_start": 35,
+    "line_end": 36,
+    "category": "insecure_deserialization"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "Path Traversal",
+    "severity": "high",
+    "line_start": 43,
+    "line_end": 44,
+    "category": "path_traversal"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "Weak Cryptography",
+    "severity": "medium",
+    "line_start": 50,
+    "line_end": 51,
+    "category": "weak_cryptography"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "SSRF",
+    "severity": "high",
+    "line_start": 57,
+    "line_end": 58,
+    "category": "ssrf"
+  },
+  {
+    "file": "vulnerable_app.py",
+    "title": "XSS",
+    "severity": "medium",
+    "line_start": 64,
+    "line_end": 65,
+    "category": "xss"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "Hardcoded Credentials",
+    "severity": "high",
+    "line_start": 8,
+    "line_end": 8,
+    "category": "hardcoded_credentials"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "SQL Injection",
+    "severity": "critical",
+    "line_start": 14,
+    "line_end": 16,
+    "category": "sql_injection"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "XSS",
+    "severity": "medium",
+    "line_start": 22,
+    "line_end": 23,
+    "category": "xss"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "Prototype Pollution",
+    "severity": "high",
+    "line_start": 28,
+    "line_end": 32,
+    "category": "prototype_pollution"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "Insecure Eval",
+    "severity": "critical",
+    "line_start": 38,
+    "line_end": 39,
+    "category": "insecure_eval"
+  },
+  {
+    "file": "vulnerable_app.js",
+    "title": "Missing Authentication",
+    "severity": "high",
+    "line_start": 44,
+    "line_end": 46,
+    "category": "missing_auth"
+  }
+]

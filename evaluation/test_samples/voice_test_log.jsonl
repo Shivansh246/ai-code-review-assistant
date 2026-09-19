@@ -1,0 +1,20 @@
+{"transcript": "hey assistant review this file", "energy_db": -20.5, "ground_truth_command": "review", "recognised_command": "review", "latency_ms": 150, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "assistant can you fix the issue on line 12", "energy_db": -18.2, "ground_truth_command": "fix", "recognised_command": "fix", "latency_ms": 180, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "explain this code to me", "energy_db": -22.1, "ground_truth_command": "explain", "recognised_command": "explain", "latency_ms": 160, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "assistant review the whole project", "energy_db": -19.4, "ground_truth_command": "review_repo", "recognised_command": "review_repo", "latency_ms": 200, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "review this code", "energy_db": -21.0, "ground_truth_command": "review", "recognised_command": "review", "latency_ms": 140, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "fix line 5", "energy_db": -23.5, "ground_truth_command": "fix", "recognised_command": "fix", "latency_ms": 155, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "assistant explain function", "energy_db": -20.8, "ground_truth_command": "explain", "recognised_command": "explain", "latency_ms": 165, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "review repository", "energy_db": -19.9, "ground_truth_command": "review_repo", "recognised_command": "review_repo", "latency_ms": 190, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "please review my file", "energy_db": -21.5, "ground_truth_command": "review", "recognised_command": "review", "latency_ms": 170, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "fix the vulnerability", "energy_db": -22.3, "ground_truth_command": "fix", "recognised_command": "fix", "latency_ms": 175, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "assistant explain this error", "energy_db": -20.1, "ground_truth_command": "explain", "recognised_command": "explain", "latency_ms": 160, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "review all code", "energy_db": -19.5, "ground_truth_command": "review_repo", "recognised_command": "review_repo", "latency_ms": 185, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "background talking about dinner", "energy_db": -35.0, "ground_truth_command": null, "recognised_command": "review", "latency_ms": 150, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "assisting with the groceries", "energy_db": -30.5, "ground_truth_command": null, "recognised_command": "fix", "latency_ms": 145, "was_wake_word": true, "was_vad_pass": true}
+{"transcript": "just coughing", "energy_db": -28.0, "ground_truth_command": null, "recognised_command": "explain", "latency_ms": 120, "was_wake_word": true, "was_vad_pass": false}
+{"transcript": "door slamming", "energy_db": -15.0, "ground_truth_command": null, "recognised_command": "review_repo", "latency_ms": 130, "was_wake_word": true, "was_vad_pass": false}
+{"transcript": "assistant review", "energy_db": -45.0, "ground_truth_command": "review", "recognised_command": null, "latency_ms": 200, "was_wake_word": false, "was_vad_pass": false}
+{"transcript": "fix it now", "energy_db": -40.5, "ground_truth_command": "fix", "recognised_command": null, "latency_ms": 180, "was_wake_word": false, "was_vad_pass": false}
+{"transcript": "explain please", "energy_db": -38.2, "ground_truth_command": "explain", "recognised_command": null, "latency_ms": 190, "was_wake_word": false, "was_vad_pass": false}
+{"transcript": "review repo", "energy_db": -42.1, "ground_truth_command": "review_repo", "recognised_command": null, "latency_ms": 210, "was_wake_word": false, "was_vad_pass": false}

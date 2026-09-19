@@ -64,6 +64,11 @@
         "command": "aiReview.openPanel",
         "title": "AI Review: Open Review Panel",
         "icon": "$(eye)"
+      },
+      {
+        "command": "aiReview.voiceMetrics",
+        "title": "AI Review: Show Voice Metrics",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -94,7 +99,7 @@
       ]
     },
     "views": {
-      "explorer": [
+      "aiReview": [
         {
           "id": "aiReview.findingsView",
           "name": "AI Security Findings",

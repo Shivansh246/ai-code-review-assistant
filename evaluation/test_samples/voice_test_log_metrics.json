@@ -1,0 +1,11 @@
+{
+  "total_samples": 20,
+  "true_activations": 12,
+  "false_activations": 2,
+  "missed_commands": 4,
+  "correct_commands": 12,
+  "command_accuracy_pct": 100.0,
+  "false_activation_rate_pct": 14.29,
+  "avg_latency_ms": 169.2,
+  "p95_latency_ms": 190
+}
