@@ -150,3 +150,6 @@ class VoiceCommand(BaseModel):
     code_context: Optional[str] = None
     file_path: Optional[str] = None
     finding_id: Optional[str] = None
+    finding_index: Optional[int] = None
+    severity: Optional[str] = None
+    target: Optional[str] = None

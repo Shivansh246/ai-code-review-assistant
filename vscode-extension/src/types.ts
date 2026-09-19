@@ -80,6 +80,18 @@ export interface VoiceCommand {
   code_context?: string;        // file content when passed along
   file_path?: string;
   finding_id?: string;
+  finding_index?: number;       // 1-indexed finding number if specified (e.g. "accept finding 3")
+  severity?: 'critical' | 'high';
+  target?: string;              // 'current_file' | 'current_finding' | 'finding_index'
+}
+
+export interface ParsedVoiceIntent {
+  command: VoiceCommandType;
+  finding_index?: number;
+  severity?: 'critical' | 'high';
+  target?: string;
+  confidence: number;
+  normalized_transcript: string;
 }
 
 export type VoiceCommandType =

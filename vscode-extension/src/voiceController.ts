@@ -35,6 +35,7 @@ import { ApiClient } from './apiClient';
 import {
   VoiceCommand,
   VoiceCommandType,
+  ParsedVoiceIntent,
   VadResult,
   VoiceMetrics,
 } from './types';
@@ -125,22 +126,203 @@ export function localVad(
   };
 }
 
-// ─── Command Parser (Weeks 3–4) ─────────────────────────────────────────────
+// ─── Command Parser (Phase 1 Hardened) ──────────────────────────────────────
 
-const COMMAND_PATTERNS: Array<[RegExp, VoiceCommandType]> = [
-  [/\breview\b/i, 'review'],
-  [/\bexplain\b/i, 'explain'],
-  [/\b(show|list)\s+(critical|high)\b/i, 'show_critical'],
-  [/\b(fix|generate\s+fix|suggest\s+fix)\b/i, 'generate_fix'],
-  [/\baccept\b/i, 'accept'],
-  [/\breject\b/i, 'reject'],
-];
+export function normalizeTranscript(raw: string): string {
+  if (!raw || !raw.trim()) {
+    return '';
+  }
+
+  let text = raw.trim().toLowerCase();
+
+  // Remove common punctuation: . , ! ? : ; " ' ( )
+  text = text.replace(/[.,!?:;"'()]/g, ' ');
+
+  // Collapse multiple spaces
+  text = text.replace(/\s+/g, ' ').trim();
+
+  // Conversational prefix strip list
+  const prefixes = [
+    'please',
+    'can you',
+    'could you',
+    'would you',
+    'can i',
+    'could i',
+    'i want to',
+    'i would like to',
+    'i d like to',
+    'id like to',
+    'i need to',
+    'hey',
+    'hi',
+    'hello',
+    'let s',
+    'lets',
+    'tell me',
+  ];
+
+  for (const prefix of prefixes) {
+    if (text === prefix) {
+      continue;
+    }
+    if (text.startsWith(prefix + ' ')) {
+      text = text.substring(prefix.length).trim();
+      break;
+    }
+  }
+
+  // Handle "show me" prefix specifically: "show me critical" -> "show critical"
+  if (text.startsWith('show me ') && text !== 'show me') {
+    text = 'show ' + text.substring(8).trim();
+  }
+
+  return text.trim();
+}
+
+interface ExtractedEntities {
+  finding_index?: number;
+  severity?: 'critical' | 'high';
+  target?: string;
+}
+
+export function extractEntities(normalized: string): ExtractedEntities {
+  const entities: ExtractedEntities = {};
+
+  // 1. Finding index extraction (e.g. "finding 3", "issue #2", "result 5", "accept 3", "reject 2")
+  const indexMatch = normalized.match(
+    /\b(?:finding|issue|result|item|number|#|accept|reject|approve|dismiss|decline|fix|explain)\s*#?\s*(\d{1,3})\b/i
+  );
+  if (indexMatch && indexMatch[1]) {
+    const idx = parseInt(indexMatch[1], 10);
+    if (idx >= 1 && idx <= 999) {
+      entities.finding_index = idx;
+      entities.target = 'finding_index';
+    }
+  }
+
+  // 2. Severity extraction
+  if (/\bcritical\b/i.test(normalized)) {
+    entities.severity = 'critical';
+  } else if (/\bhigh\b/i.test(normalized)) {
+    entities.severity = 'high';
+  }
+
+  // 3. Target resolution
+  if (!entities.target) {
+    if (/\b(current\s+file|this\s+file|active\s+file|file)\b/i.test(normalized)) {
+      entities.target = 'current_file';
+    } else if (/\b(current\s+finding|this\s+finding|focused\s+finding|this\s+issue|current\s+issue)\b/i.test(normalized)) {
+      entities.target = 'current_finding';
+    }
+  }
+
+  return entities;
+}
+
+/**
+ * Deterministic command parser with explicit precedence:
+ *
+ * Precedence Order:
+ * 1. generate_fix  (highest priority for fix/patch requests)
+ * 2. show_critical (high priority for critical/high filtering)
+ * 3. accept        (high priority for approval)
+ * 4. reject        (high priority for rejection/dismissal)
+ * 5. explain       (explanation requests)
+ * 6. review        (file/repo security review)
+ * 7. unknown       (safety fallback)
+ */
+export function parseVoiceIntent(rawTranscript: string): ParsedVoiceIntent {
+  const normalized = normalizeTranscript(rawTranscript);
+  if (!normalized) {
+    return {
+      command: 'unknown',
+      confidence: 0.0,
+      normalized_transcript: '',
+    };
+  }
+
+  const entities = extractEntities(normalized);
+
+  // 1. generate_fix
+  if (/\b(fix|suggest\s+a?\s*fix|generate\s+a?\s*fix|how\s+to\s+fix|how\s+do\s+i\s+fix|patch)\b/i.test(normalized)) {
+    return {
+      command: 'generate_fix',
+      finding_index: entities.finding_index,
+      target: entities.target || (entities.finding_index ? 'finding_index' : 'current_finding'),
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 2. show_critical
+  if (
+    /\b(show|list|get|display|filter)\s+(?:me\s+)?(?:the\s+)?(critical|high)\b/i.test(normalized) ||
+    /\b(critical|high)\s+(findings?|issues?|vulnerabilities?|alerts?)\b/i.test(normalized) ||
+    /\bshow\s+critical\b/i.test(normalized) ||
+    /\bshow\s+high\b/i.test(normalized)
+  ) {
+    return {
+      command: 'show_critical',
+      severity: entities.severity || 'critical',
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 3. accept
+  if (/\b(accept|approve|mark\s+(?:as\s+)?accepted)\b/i.test(normalized)) {
+    return {
+      command: 'accept',
+      finding_index: entities.finding_index,
+      target: entities.target || (entities.finding_index ? 'finding_index' : 'current_finding'),
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 4. reject
+  if (/\b(reject|dismiss|decline|mark\s+(?:as\s+)?rejected)\b/i.test(normalized)) {
+    return {
+      command: 'reject',
+      finding_index: entities.finding_index,
+      target: entities.target || (entities.finding_index ? 'finding_index' : 'current_finding'),
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 5. explain
+  if (/\b(explain|why|why\s+is|show\s+explanation|explain\s+this|detail|details)\b/i.test(normalized)) {
+    return {
+      command: 'explain',
+      finding_index: entities.finding_index,
+      target: entities.target || (entities.finding_index ? 'finding_index' : 'current_finding'),
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 6. review
+  if (/\b(review|scan|check|analyze|inspect|audit)\b/i.test(normalized)) {
+    return {
+      command: 'review',
+      target: entities.target || 'current_file',
+      confidence: 0.9,
+      normalized_transcript: normalized,
+    };
+  }
+
+  // 7. Safety fallback
+  return {
+    command: 'unknown',
+    confidence: 0.0,
+    normalized_transcript: normalized,
+  };
+}
 
 export function parseVoiceCommand(transcript: string): VoiceCommandType {
-  for (const [pattern, cmd] of COMMAND_PATTERNS) {
-    if (pattern.test(transcript)) { return cmd; }
-  }
-  return 'unknown';
+  return parseVoiceIntent(transcript).command;
 }
 
 // ─── Voice Controller ────────────────────────────────────────────────────────
