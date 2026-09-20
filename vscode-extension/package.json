@@ -138,7 +138,27 @@
         "aiReview.vadThreshold": {
           "type": "number",
           "default": 0.5,
-          "description": "Voice Activity Detection confidence threshold (0.0–1.0)"
+          "description": "Voice Activity Detection confidence threshold (legacy 0.0–1.0)"
+        },
+        "aiReview.vadOnThresholdDb": {
+          "type": "number",
+          "default": -30.0,
+          "description": "Energy threshold in dB to trigger voice activity (-60.0 to 0.0 dB)"
+        },
+        "aiReview.vadOffThresholdDb": {
+          "type": "number",
+          "default": -42.0,
+          "description": "Energy threshold in dB to end voice activity hangover (-60.0 to 0.0 dB)"
+        },
+        "aiReview.vadOnDurationMs": {
+          "type": "number",
+          "default": 80,
+          "description": "Sustained speech duration in ms required to trigger VAD"
+        },
+        "aiReview.vadOffDurationMs": {
+          "type": "number",
+          "default": 400,
+          "description": "Silence hangover duration in ms required to deactivate VAD"
         },
         "aiReview.autoReviewOnSave": {
           "type": "boolean",

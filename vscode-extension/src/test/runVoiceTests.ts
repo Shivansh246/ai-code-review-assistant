@@ -1,6 +1,6 @@
 /**
  * runVoiceTests.ts
- * Executable Node.js runner for voice parser unit tests.
+ * Executable Node.js runner for voice parser & Phase 2 Hysteresis VAD Engine unit tests.
  * Registers lightweight mock for 'vscode' module so tests execute cleanly outside VS Code.
  */
 
@@ -48,6 +48,8 @@ import {
   extractEntities,
   parseVoiceIntent,
   parseVoiceCommand,
+  localVad,
+  HysteresisVadEngine,
 } from '../voiceController';
 
 let passed = 0;
@@ -77,7 +79,7 @@ function assertDeepEq(actual: any, expected: any, msg?: string) {
   }
 }
 
-console.log('\n=== Running Voice Intent Parser Unit Tests ===\n');
+console.log('\n=== Running Voice Intent Parser & Hysteresis VAD Unit Tests ===\n');
 
 console.log('--- normalizeTranscript ---');
 test('returns empty string for empty/whitespace input', () => {
@@ -254,6 +256,100 @@ test('returns unknown for empty or prefix-only input', () => {
   assertEq(parseVoiceCommand(''), 'unknown');
   assertEq(parseVoiceCommand('please'), 'unknown');
   assertEq(parseVoiceCommand('can you'), 'unknown');
+});
+
+console.log('\n--- Phase 2 Hysteresis VAD Engine Unit Tests ---');
+
+test('remains IDLE during ambient silence (-50 dB)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0 });
+  for (let i = 0; i < 10; i++) {
+    const res = vad.processFrame(-50.0, 16.6);
+    assertEq(res.is_speech, false);
+    assertEq(res.state, 'IDLE');
+  }
+});
+
+test('single impulsive noise frame (-20 dB) does NOT trigger VAD (moving average filter)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, smoothingWindowSize: 5 });
+  // Prime with -50 dB silence
+  for (let i = 0; i < 4; i++) { vad.processFrame(-50.0, 16.6); }
+  // Single spike of -20 dB
+  const res = vad.processFrame(-20.0, 16.6);
+  // Smoothed average: (4*-50 + -20)/5 = -44 dB < -30 dB ON threshold
+  assertEq(res.is_speech, false);
+  assertEq(res.state, 'IDLE');
+});
+
+test('sustained speech energy (-25 dB for >= 80ms) triggers VAD (VOICE_DETECTED -> ACTIVE_LISTENING)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80 });
+  let lastRes: any;
+  for (let i = 0; i < 6; i++) {
+    lastRes = vad.processFrame(-25.0, 20.0); // 6 * 20ms = 120ms sustained speech
+  }
+  assertEq(lastRes.is_speech, true);
+  assertEq(lastRes.state, 'ACTIVE_LISTENING');
+});
+
+test('deadband energy (-35 dB) maintains active speech state (hysteresis)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80 });
+  for (let i = 0; i < 5; i++) { vad.processFrame(-25.0, 20.0); } // Activate speech
+  // Energy drops to -35 dB (between OFF -42dB and ON -30dB)
+  const res = vad.processFrame(-35.0, 20.0);
+  assertEq(res.is_speech, true);
+  assertEq(res.state, 'ACTIVE_LISTENING');
+});
+
+test('short silence during speech (100ms) does NOT trigger deactivation (hangover timer active)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80, offDurationMs: 400 });
+  for (let i = 0; i < 5; i++) { vad.processFrame(-25.0, 20.0); } // Activate speech
+  // 100ms of silence (-50 dB)
+  let res: any;
+  for (let i = 0; i < 5; i++) { res = vad.processFrame(-50.0, 20.0); }
+  assertEq(res.is_speech, true);
+  assertEq(res.state, 'ACTIVE_LISTENING');
+});
+
+test('sustained silence (>= 400ms) triggers VAD deactivation (COMMAND_PROCESSING -> IDLE)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80, offDurationMs: 400 });
+  for (let i = 0; i < 5; i++) { vad.processFrame(-25.0, 20.0); } // Activate speech
+  // 500ms of silence (-50 dB)
+  let res: any;
+  for (let i = 0; i < 25; i++) { res = vad.processFrame(-50.0, 20.0); }
+  assertEq(res.is_speech, false);
+  assertEq(res.state, 'IDLE');
+});
+
+test('localVad legacy helper maps threshold correctly and handles dB input', () => {
+  const silent = localVad(-55.0, -30.0);
+  assertEq(silent.is_speech, false);
+
+  const speech = localVad(-25.0, -30.0);
+  assertEq(speech.is_speech, true);
+});
+
+test('triggers VAD activation under variable frame intervals (10ms, 35ms, 45ms -> total 90ms)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80 });
+  vad.processFrame(-25.0, 10.0); // 10ms elapsed
+  assertEq(vad.getState(), 'IDLE');
+  vad.processFrame(-25.0, 35.0); // 45ms total elapsed
+  assertEq(vad.getState(), 'IDLE');
+  const res = vad.processFrame(-25.0, 45.0); // 90ms total elapsed >= 80ms
+  assertEq(res.is_speech, true);
+  assertEq(res.state, 'VOICE_DETECTED');
+});
+
+test('triggers VAD deactivation under variable frame intervals (150ms, 260ms -> total 410ms)', () => {
+  const vad = new HysteresisVadEngine({ onThresholdDb: -30.0, offThresholdDb: -42.0, onDurationMs: 80, offDurationMs: 400 });
+  // Activate speech
+  vad.processFrame(-25.0, 100.0);
+  assertEq(vad.getState(), 'VOICE_DETECTED');
+
+  // Silence with variable frame intervals
+  vad.processFrame(-50.0, 150.0); // 150ms silence
+  assertEq(vad.getState(), 'ACTIVE_LISTENING');
+  const res = vad.processFrame(-50.0, 260.0); // 410ms silence >= 400ms
+  assertEq(res.is_speech, false);
+  assertEq(res.state, 'COMMAND_PROCESSING');
 });
 
 console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);

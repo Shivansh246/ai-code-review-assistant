@@ -2,32 +2,29 @@
  * voiceController.ts
  * Manages the entire voice pipeline for the extension.
  *
- * Weeks 3–4: STT prototype + voice command parsing.
- * Week 5:    Local VAD + wake-word gate (heavy pipeline only runs after gate).
- * Week 6:    Accept/Reject voice actions + feedback status display.
- * Week 7:    Full voice→command→result→TTS loop.
- * Week 8:    Metrics collection (accuracy, false activations, latency).
+ * Phase 1: Hardened deterministic intent parser.
+ * Phase 2: Local Pre-STT energy-based VAD gate (SpeechRecognition stopped during silence).
  *
  * Architecture:
- *   Browser MediaRecorder (in webview) ──audio PCM──►  VoiceController
+ *   Browser MediaRecorder (in webview) ──audio stream──►  AudioContext / AnalyserNode
  *     │
  *     ▼
- *   Local VAD check  (energy-based + optional Silero)
- *     │ passes VAD?
+ *   Local Hysteresis VAD Gate  (Energy dB moving average + ON/OFF thresholds)
+ *     │ passes VAD? (Speech ON)
  *     ▼
- *   Wake-word check  (keyword match on lightweight transcript)
- *     │ wake word found?
- *     ▼
- *   STT  (Web Speech API in webview or Whisper via backend)
+ *   STT Activation  (SpeechRecognition.start() triggered ONLY after VAD gate)
  *     │
  *     ▼
- *   Command parser  (intent extraction)
+ *   STT Transcript  (Emits final text transcript)
  *     │
  *     ▼
- *   Execute command  (calls existing extension commands)
+ *   Wake-word Check  (Transcript-level keyword filter)
  *     │
  *     ▼
- *   TTS response  (window.showInformationMessage + optional speech synthesis)
+ *   Command Parser  (Deterministic precedence intent extraction)
+ *     │
+ *     ▼
+ *   Execute Command  (Dispatches existing VS Code commands)
  */
 
 import * as vscode from 'vscode';
@@ -37,10 +34,12 @@ import {
   VoiceCommandType,
   ParsedVoiceIntent,
   VadResult,
+  VadState,
+  VadConfig,
   VoiceMetrics,
 } from './types';
 
-// ─── Metrics (Week 8) ───────────────────────────────────────────────────────
+// ─── Metrics (Phase 2 Extended) ─────────────────────────────────────────────
 
 export class VoiceMetricsTracker {
   private metrics: VoiceMetrics = {
@@ -50,12 +49,28 @@ export class VoiceMetricsTracker {
     missed_commands: 0,
     avg_latency_ms: 0,
     latency_samples: [],
+    vad_activations: 0,
+    vad_false_activations: 0,
+    stt_active_ms: 0,
+    stt_inactive_ms: 0,
   };
 
   recordActivation(isTrue: boolean): void {
     this.metrics.total_activations++;
     if (isTrue) { this.metrics.true_activations++; }
     else { this.metrics.false_activations++; }
+  }
+
+  recordVadActivation(isFalse: boolean = false): void {
+    this.metrics.vad_activations = (this.metrics.vad_activations || 0) + 1;
+    if (isFalse) {
+      this.metrics.vad_false_activations = (this.metrics.vad_false_activations || 0) + 1;
+    }
+  }
+
+  recordSttState(activeMs: number, inactiveMs: number): void {
+    this.metrics.stt_active_ms = (this.metrics.stt_active_ms || 0) + activeMs;
+    this.metrics.stt_inactive_ms = (this.metrics.stt_inactive_ms || 0) + inactiveMs;
   }
 
   recordMissedCommand(): void {
@@ -86,6 +101,8 @@ export class VoiceMetricsTracker {
       `| True activations | ${m.true_activations} |\n` +
       `| False activations (FAR) | ${m.false_activations} (${fpr}%) |\n` +
       `| Missed commands | ${m.missed_commands} |\n` +
+      `| VAD Activations | ${m.vad_activations || 0} |\n` +
+      `| VAD False Activations | ${m.vad_false_activations || 0} |\n` +
       `| Avg response latency | ${m.avg_latency_ms.toFixed(0)} ms |\n`
     );
   }
@@ -98,31 +115,165 @@ export class VoiceMetricsTracker {
       missed_commands: 0,
       avg_latency_ms: 0,
       latency_samples: [],
+      vad_activations: 0,
+      vad_false_activations: 0,
+      stt_active_ms: 0,
+      stt_inactive_ms: 0,
     };
   }
 }
 
-// ─── Local VAD (Week 5) ─────────────────────────────────────────────────────
+// ─── Hysteresis VAD Engine (Phase 2) ────────────────────────────────────────
+
+/**
+ * Deterministic energy-based Voice Activity Detection engine with
+ * temporal frame smoothing, dual-threshold hysteresis, and hangover timing.
+ */
+export class HysteresisVadEngine {
+  private state: VadState = 'IDLE';
+  private config: VadConfig;
+  private energyBuffer: number[] = [];
+  private consecutiveOnMs: number = 0;
+  private consecutiveOffMs: number = 0;
+  private isSpeechActive: boolean = false;
+
+  constructor(config?: Partial<VadConfig>) {
+    this.config = {
+      onThresholdDb: config?.onThresholdDb ?? -30.0,
+      offThresholdDb: config?.offThresholdDb ?? -42.0,
+      onDurationMs: config?.onDurationMs ?? 80,
+      offDurationMs: config?.offDurationMs ?? 400,
+      frameDurationMs: config?.frameDurationMs ?? 16.6,
+      smoothingWindowSize: config?.smoothingWindowSize ?? 5,
+    };
+  }
+
+  public updateConfig(newConfig: Partial<VadConfig>): void {
+    if (newConfig.onThresholdDb !== undefined) { this.config.onThresholdDb = newConfig.onThresholdDb; }
+    if (newConfig.offThresholdDb !== undefined) { this.config.offThresholdDb = newConfig.offThresholdDb; }
+    if (newConfig.onDurationMs !== undefined) { this.config.onDurationMs = newConfig.onDurationMs; }
+    if (newConfig.offDurationMs !== undefined) { this.config.offDurationMs = newConfig.offDurationMs; }
+    if (newConfig.frameDurationMs !== undefined) { this.config.frameDurationMs = newConfig.frameDurationMs; }
+    if (newConfig.smoothingWindowSize !== undefined) { this.config.smoothingWindowSize = newConfig.smoothingWindowSize; }
+  }
+
+  public reset(): void {
+    this.state = 'IDLE';
+    this.energyBuffer = [];
+    this.consecutiveOnMs = 0;
+    this.consecutiveOffMs = 0;
+    this.isSpeechActive = false;
+  }
+
+  public getState(): VadState {
+    return this.state;
+  }
+
+  public setState(newState: VadState): void {
+    this.state = newState;
+  }
+
+  public getConfig(): VadConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Process a single frame of raw audio energy in dB.
+   */
+  public processFrame(rawEnergyDb: number, frameDurationMs?: number): VadResult {
+    const deltaMs = frameDurationMs ?? this.config.frameDurationMs ?? 16.6;
+
+    // 1. Moving Average Temporal Smoothing
+    const windowSize = this.config.smoothingWindowSize ?? 5;
+    const nominalWindowMs = windowSize * (this.config.frameDurationMs ?? 16.6);
+
+    // If frame delta exceeds smoothing window duration, flush stale window
+    if (deltaMs >= nominalWindowMs) {
+      this.energyBuffer = [rawEnergyDb];
+    } else {
+      this.energyBuffer.push(rawEnergyDb);
+      if (this.energyBuffer.length > windowSize) {
+        this.energyBuffer.shift();
+      }
+    }
+    const smoothedDb =
+      this.energyBuffer.reduce((sum, val) => sum + val, 0) / this.energyBuffer.length;
+
+    // 2. Dual Threshold & Timing Accrual
+    if (smoothedDb >= this.config.onThresholdDb) {
+      this.consecutiveOnMs += deltaMs;
+      this.consecutiveOffMs = 0;
+    } else if (smoothedDb <= this.config.offThresholdDb) {
+      this.consecutiveOffMs += deltaMs;
+      this.consecutiveOnMs = 0;
+    } else {
+      // In deadband between OFF and ON thresholds
+      this.consecutiveOnMs = 0;
+      this.consecutiveOffMs = 0;
+    }
+
+    // 3. State Machine Transitions
+    if (!this.isSpeechActive) {
+      if (this.consecutiveOnMs >= this.config.onDurationMs) {
+        this.isSpeechActive = true;
+        this.state = 'VOICE_DETECTED';
+      } else {
+        this.state = 'IDLE';
+      }
+    } else {
+      if (this.consecutiveOffMs >= this.config.offDurationMs) {
+        this.isSpeechActive = false;
+        this.state = 'COMMAND_PROCESSING';
+      } else {
+        this.state = 'ACTIVE_LISTENING';
+      }
+    }
+
+    // 4. Calculate Confidence (0.0 to 1.0)
+    const range = Math.max(1, this.config.onThresholdDb - this.config.offThresholdDb);
+    const confidence = Math.min(
+      1.0,
+      Math.max(0.0, (smoothedDb - this.config.offThresholdDb) / range)
+    );
+
+    return {
+      is_speech: this.isSpeechActive,
+      confidence,
+      wake_word_detected: false,
+      state: this.state,
+      energy_db: rawEnergyDb,
+      smoothed_energy_db: smoothedDb,
+    };
+  }
+}
 
 /**
  * Lightweight energy-based Voice Activity Detection.
- * Runs locally in Node — no network call required.
- * For production, swap this with Silero VAD via ONNX runtime.
+ * Supports legacy single threshold or dual-threshold dB hysteresis.
  */
 export function localVad(
   audioEnergyDb: number,
-  vadThreshold: number
+  vadThreshold: number = -30.0
 ): VadResult {
-  // Simple energy gate: if RMS exceeds threshold, mark as speech
-  const is_speech = audioEnergyDb > vadThreshold;
+  let onThresholdDb = vadThreshold;
+  if (vadThreshold >= 0.0 && vadThreshold <= 1.0) {
+    onThresholdDb = -60.0 + vadThreshold * 60.0;
+  }
+
+  const offThresholdDb = onThresholdDb - 12.0;
+  const is_speech = audioEnergyDb >= onThresholdDb;
   const confidence = Math.min(
     1,
-    Math.max(0, (audioEnergyDb - vadThreshold + 10) / 20)
+    Math.max(0, (audioEnergyDb - offThresholdDb) / 20)
   );
+
   return {
     is_speech,
     confidence,
-    wake_word_detected: false, // will be set by wake-word check
+    wake_word_detected: false,
+    energy_db: audioEnergyDb,
+    smoothed_energy_db: audioEnergyDb,
+    state: is_speech ? 'ACTIVE_LISTENING' : 'IDLE',
   };
 }
 
@@ -325,13 +476,13 @@ export function parseVoiceCommand(transcript: string): VoiceCommandType {
   return parseVoiceIntent(transcript).command;
 }
 
-// ─── Voice Controller ────────────────────────────────────────────────────────
+// ─── Voice Controller (Phase 2 Pre-STT Gate) ────────────────────────────────
 
 export class VoiceController {
   private statusBarItem: vscode.StatusBarItem;
   private isListening = false;
   private wakeWord: string;
-  private vadThreshold: number;
+  private vadEngine: HysteresisVadEngine;
   private metrics = new VoiceMetricsTracker();
   private activePanel: vscode.WebviewPanel | undefined;
 
@@ -349,7 +500,17 @@ export class VoiceController {
 
     const cfg = vscode.workspace.getConfiguration('aiReview');
     this.wakeWord = cfg.get<string>('wakeWord', 'review');
-    this.vadThreshold = cfg.get<number>('vadThreshold', 0.5);
+    const onDb = cfg.get<number>('vadOnThresholdDb', -30.0);
+    const offDb = cfg.get<number>('vadOffThresholdDb', -42.0);
+    const onMs = cfg.get<number>('vadOnDurationMs', 80);
+    const offMs = cfg.get<number>('vadOffDurationMs', 400);
+
+    this.vadEngine = new HysteresisVadEngine({
+      onThresholdDb: onDb,
+      offThresholdDb: offDb,
+      onDurationMs: onMs,
+      offDurationMs: offMs,
+    });
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -373,7 +534,7 @@ export class VoiceController {
     this.updateStatusBar('listening');
     this.openVoicePanel();
     vscode.window.showInformationMessage(
-      `🎙 Voice active. Say "${this.wakeWord}" to trigger a command.`
+      `🎙 Voice active (Local VAD Gate). Say "${this.wakeWord}" to trigger a command.`
     );
   }
 
@@ -395,23 +556,32 @@ export class VoiceController {
   ): Promise<void> {
     const t0 = Date.now();
 
-    // ── Step 1: Local VAD gate ────────────────────────────────────────────
+    // ── Step 1: Local VAD check ────────────────────────────────────────────
     const cfg = vscode.workspace.getConfiguration('aiReview');
-    this.vadThreshold = cfg.get<number>('vadThreshold', 0.5);
-    const vad = localVad(audioEnergyDb, this.vadThreshold);
+    const onDb = cfg.get<number>('vadOnThresholdDb', -30.0);
+    const offDb = cfg.get<number>('vadOffThresholdDb', -42.0);
+
+    this.vadEngine.updateConfig({
+      onThresholdDb: onDb,
+      offThresholdDb: offDb,
+    });
+
+    const vad = this.vadEngine.processFrame(audioEnergyDb);
+    this.metrics.recordVadActivation(!vad.is_speech);
 
     if (!vad.is_speech) {
-      // Background noise — skip silently
+      // Background noise / silence — skip silently
       return;
     }
 
-    // ── Step 2: Wake-word gate ────────────────────────────────────────────
+    // ── Step 2: Transcript Wake-word Gate ─────────────────────────────────
     const wakeWordFound = transcript
       .toLowerCase()
       .includes(this.wakeWord.toLowerCase());
 
     if (!wakeWordFound) {
       this.metrics.recordActivation(false);
+      this.metrics.recordVadActivation(true); // VAD passed but wake word missing
       return;
     }
 
@@ -450,7 +620,7 @@ export class VoiceController {
     }
   }
 
-  /** Accept a finding by voice or button — Week 6 */
+  /** Accept a finding by voice or button */
   async acceptFinding(findingId: string): Promise<void> {
     await this.api.sendFeedback({
       finding_id: findingId,
@@ -461,7 +631,7 @@ export class VoiceController {
     vscode.window.showInformationMessage(`✅ Finding accepted: ${findingId}`);
   }
 
-  /** Reject a finding by voice or button — Week 6 */
+  /** Reject a finding by voice or button */
   async rejectFinding(findingId: string): Promise<void> {
     await this.api.sendFeedback({
       finding_id: findingId,
@@ -519,7 +689,6 @@ export class VoiceController {
         break;
     }
 
-    // Also send to backend for multimodal context (Week 4)
     try {
       await this.api.sendVoiceCommand(cmd);
     } catch {
@@ -527,14 +696,14 @@ export class VoiceController {
     }
   }
 
-  /** Text-to-Speech via webview postMessage — Week 7 */
+  /** Text-to-Speech via webview postMessage */
   private speak(text: string): void {
     this.activePanel?.webview.postMessage({ type: 'speak', text });
   }
 
   private updateStatusBar(state: 'idle' | 'listening' | 'processing'): void {
     const icons = { idle: '$(mic)', listening: '$(radio-tower)', processing: '$(loading~spin)' };
-    const labels = { idle: 'AI Voice', listening: 'Listening…', processing: 'Processing…' };
+    const labels = { idle: 'AI Voice', listening: 'Listening (VAD Gate)…', processing: 'Processing…' };
     this.statusBarItem.text = `${icons[state]} ${labels[state]}`;
     this.statusBarItem.backgroundColor =
       state === 'listening'
@@ -542,16 +711,24 @@ export class VoiceController {
         : undefined;
   }
 
-  /** Open the voice webview panel that handles microphone access + Web Speech API */
+  /** Open the voice webview panel that handles microphone access + Pre-STT VAD Gate */
   private openVoicePanel(): void {
     this.activePanel = vscode.window.createWebviewPanel(
       'aiReviewVoice',
-      '🎙 Voice Commands',
+      '🎙 Voice Commands (Pre-STT Gate)',
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true }
     );
 
-    this.activePanel.webview.html = this.getVoiceWebviewHtml();
+    const cfg = vscode.workspace.getConfiguration('aiReview');
+    const vadConfig: VadConfig = {
+      onThresholdDb: cfg.get<number>('vadOnThresholdDb', -30.0),
+      offThresholdDb: cfg.get<number>('vadOffThresholdDb', -42.0),
+      onDurationMs: cfg.get<number>('vadOnDurationMs', 80),
+      offDurationMs: cfg.get<number>('vadOffDurationMs', 400),
+    };
+
+    this.activePanel.webview.html = this.getVoiceWebviewHtml(vadConfig);
 
     // Receive transcripts from the webview
     this.activePanel.webview.onDidReceiveMessage(async (msg) => {
@@ -570,13 +747,13 @@ export class VoiceController {
     });
   }
 
-  private getVoiceWebviewHtml(): string {
+  private getVoiceWebviewHtml(vadConfig: VadConfig): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Voice Commands</title>
+  <title>AI Voice Commands — Pre-STT Gate</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -584,18 +761,25 @@ export class VoiceController {
       background: var(--vscode-editor-background);
       color: var(--vscode-editor-foreground);
       display: flex; flex-direction: column; align-items: center;
-      padding: 32px 16px; gap: 24px; min-height: 100vh;
+      padding: 32px 16px; gap: 20px; min-height: 100vh;
     }
     h2 { font-size: 1.2rem; opacity: 0.9; }
     #status {
       font-size: 3rem;
-      animation: none;
       transition: transform 0.2s;
     }
     #status.active { animation: pulse 1s infinite; }
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.15); opacity: 0.7; }
+    }
+    #vad-badge {
+      font-size: 0.85rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      font-weight: 600;
     }
     #transcript {
       width: 100%; max-width: 420px;
@@ -606,12 +790,6 @@ export class VoiceController {
       font-size: 0.95rem;
       min-height: 48px;
       word-break: break-word;
-    }
-    #command-display {
-      font-weight: bold;
-      color: var(--vscode-terminal-ansiGreen);
-      font-size: 1rem;
-      min-height: 1.2em;
     }
     #energy-bar {
       width: 100%; max-width: 420px;
@@ -630,7 +808,7 @@ export class VoiceController {
       font-size: 0.8rem;
       opacity: 0.6;
       text-align: center;
-      max-width: 340px;
+      max-width: 360px;
     }
     button {
       padding: 8px 20px;
@@ -645,15 +823,14 @@ export class VoiceController {
   </style>
 </head>
 <body>
-  <h2>AI Code Review — Voice Control</h2>
+  <h2>AI Code Review — Local VAD Gate</h2>
   <div id="status">🎙</div>
-  <div id="transcript">Waiting for speech…</div>
+  <div id="vad-badge">VAD State: IDLE (STT Stopped)</div>
+  <div id="transcript">Waiting for speech energy…</div>
   <div id="energy-bar"><div id="energy-fill"></div></div>
-  <div id="command-display"></div>
   <p class="hint">
-    Say <strong>"review"</strong>, <strong>"explain"</strong>,
-    <strong>"show critical"</strong>, <strong>"generate fix"</strong>,
-    <strong>"accept"</strong>, or <strong>"reject"</strong>.
+    STT is kept <strong>stopped during silence</strong>.<br/>
+    Speak to trigger VAD (ON threshold: ${vadConfig.onThresholdDb} dB).
   </p>
   <button onclick="toggleListen()" id="toggleBtn">Stop Listening</button>
 
@@ -662,6 +839,20 @@ export class VoiceController {
     let recognition;
     let listening = true;
     let audioCtx, analyser, micStream;
+
+    // VAD Configuration & State Machine
+    const VAD_ON_DB = ${vadConfig.onThresholdDb};
+    const VAD_OFF_DB = ${vadConfig.offThresholdDb};
+    const VAD_ON_MS = ${vadConfig.onDurationMs};
+    const VAD_OFF_MS = ${vadConfig.offDurationMs};
+
+    let vadState = 'IDLE';
+    let isSpeechActive = false;
+    let consecutiveOnMs = 0;
+    let consecutiveOffMs = 0;
+    let energyBuffer = [];
+    let lastFrameTime = performance.now();
+    let recognitionState = 'STOPPED'; // 'STOPPED' | 'STARTING' | 'RUNNING' | 'STOPPING'
 
     // ── TTS (Week 7) ──────────────────────────────────────────────────────
     window.addEventListener('message', e => {
@@ -673,7 +864,32 @@ export class VoiceController {
       }
     });
 
-    // ── Energy / VAD ──────────────────────────────────────────────────────
+    // ── STT Lifecycle Safe Controls ───────────────────────────────────────
+    function safeStartRecognition() {
+      if (!listening || !recognition) return;
+      if (recognitionState === 'RUNNING' || recognitionState === 'STARTING') return;
+      try {
+        recognitionState = 'STARTING';
+        recognition.start();
+      } catch(e) {
+        console.warn('SpeechRecognition start ignored:', e);
+        recognitionState = 'STOPPED';
+      }
+    }
+
+    function safeStopRecognition() {
+      if (!recognition) return;
+      if (recognitionState === 'STOPPED' || recognitionState === 'STOPPING') return;
+      try {
+        recognitionState = 'STOPPING';
+        recognition.stop();
+      } catch(e) {
+        console.warn('SpeechRecognition stop ignored:', e);
+        recognitionState = 'STOPPED';
+      }
+    }
+
+    // ── Audio Analysis & Local Hysteresis VAD Gate ────────────────────────
     async function startAudioAnalysis() {
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -684,7 +900,7 @@ export class VoiceController {
         source.connect(analyser);
         updateEnergy();
       } catch(e) {
-        console.warn('Mic access denied, energy bar disabled:', e);
+        document.getElementById('transcript').textContent = 'Microphone access denied/error: ' + e.message;
       }
     }
 
@@ -697,18 +913,70 @@ export class VoiceController {
     }
 
     function updateEnergy() {
-      const db = getEnergyDb();
-      const pct = Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+      const now = performance.now();
+      const deltaMs = Math.max(1, now - lastFrameTime);
+      lastFrameTime = now;
+
+      const rawDb = getEnergyDb();
+
+      // Moving Average Temporal Smoothing (5 frames)
+      energyBuffer.push(rawDb);
+      if (energyBuffer.length > 5) { energyBuffer.shift(); }
+      const smoothedDb = energyBuffer.reduce((s, v) => s + v, 0) / energyBuffer.length;
+
+      // Update energy bar UI
+      const pct = Math.max(0, Math.min(100, (smoothedDb + 60) / 60 * 100));
       document.getElementById('energy-fill').style.width = pct + '%';
+
+      // Hysteresis timing calculation
+      if (smoothedDb >= VAD_ON_DB) {
+        consecutiveOnMs += deltaMs;
+        consecutiveOffMs = 0;
+      } else if (smoothedDb <= VAD_OFF_DB) {
+        consecutiveOffMs += deltaMs;
+        consecutiveOnMs = 0;
+      } else {
+        consecutiveOnMs = 0;
+        consecutiveOffMs = 0;
+      }
+
+      // VAD State Machine
+      const badge = document.getElementById('vad-badge');
+      if (!isSpeechActive) {
+        if (consecutiveOnMs >= VAD_ON_MS) {
+          isSpeechActive = true;
+          vadState = 'VOICE_DETECTED';
+          badge.textContent = 'VAD: Speech Detected (Triggering STT)';
+          badge.style.background = '#00c853';
+          safeStartRecognition();
+        } else {
+          vadState = 'IDLE';
+          badge.textContent = 'VAD: IDLE (STT Stopped)';
+          badge.style.background = 'var(--vscode-badge-background)';
+        }
+      } else {
+        if (consecutiveOffMs >= VAD_OFF_MS) {
+          isSpeechActive = false;
+          vadState = 'COMMAND_PROCESSING';
+          badge.textContent = 'VAD: Hangover Expired (Stopping STT)';
+          badge.style.background = 'var(--vscode-badge-background)';
+          safeStopRecognition();
+        } else {
+          vadState = 'ACTIVE_LISTENING';
+          badge.textContent = 'VAD: Active Listening';
+          badge.style.background = '#ff6d00';
+        }
+      }
+
       if (listening) { requestAnimationFrame(updateEnergy); }
     }
 
-    // ── Web Speech API ────────────────────────────────────────────────────
-    function startRecognition() {
+    // ── Web Speech API Setup ──────────────────────────────────────────────
+    function initRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         document.getElementById('transcript').textContent =
-          'Speech recognition not supported. Use Chrome/Edge.';
+          'Speech recognition not supported in this browser. Use Chrome/Edge.';
         return;
       }
 
@@ -718,6 +986,7 @@ export class VoiceController {
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
+        recognitionState = 'RUNNING';
         document.getElementById('status').classList.add('active');
       };
 
@@ -734,21 +1003,25 @@ export class VoiceController {
 
         if (final) {
           const energyDb = getEnergyDb();
-          vscode.postMessage({ type: 'transcript', transcript: final.trim(), energyDb });
+          vscode.postMessage({ type: 'transcript', transcript: final.trim(), energyDb, vadState: 'COMMAND_PROCESSING' });
+          safeStopRecognition();
+          isSpeechActive = false;
+          vadState = 'IDLE';
         }
       };
 
       recognition.onerror = (e) => {
+        recognitionState = 'STOPPED';
         if (e.error !== 'no-speech') {
           document.getElementById('transcript').textContent = 'Error: ' + e.error;
         }
       };
 
       recognition.onend = () => {
-        if (listening) { recognition.start(); } // auto-restart
+        recognitionState = 'STOPPED';
+        document.getElementById('status').classList.remove('active');
+        // STT remains STOPPED until VAD detects speech again
       };
-
-      recognition.start();
     }
 
     function toggleListen() {
@@ -756,12 +1029,15 @@ export class VoiceController {
       document.getElementById('toggleBtn').textContent =
         listening ? 'Stop Listening' : 'Start Listening';
       document.getElementById('status').classList.toggle('active', listening);
-      if (listening) { recognition && recognition.start(); }
-      else { recognition && recognition.stop(); }
+      if (!listening) {
+        safeStopRecognition();
+        isSpeechActive = false;
+        vadState = 'IDLE';
+      }
     }
 
     startAudioAnalysis();
-    startRecognition();
+    initRecognition();
   </script>
 </body>
 </html>`;

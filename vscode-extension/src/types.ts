@@ -103,15 +103,36 @@ export type VoiceCommandType =
   | 'reject'
   | 'unknown';
 
-/** VAD result from local voice gate (Week 5) */
+/** VAD State Machine States (Phase 2) */
+export type VadState =
+  | 'IDLE'
+  | 'VOICE_DETECTED'
+  | 'ACTIVE_LISTENING'
+  | 'COMMAND_PROCESSING'
+  | 'COMMAND_COMPLETE';
+
+/** Configuration for Hysteresis VAD Engine */
+export interface VadConfig {
+  onThresholdDb: number;        // e.g. -30.0 dB
+  offThresholdDb: number;       // e.g. -42.0 dB
+  onDurationMs: number;         // e.g. 80 ms
+  offDurationMs: number;        // e.g. 400 ms
+  frameDurationMs?: number;     // e.g. 16.6 ms
+  smoothingWindowSize?: number; // e.g. 5 frames
+}
+
+/** VAD result from local voice gate */
 export interface VadResult {
   is_speech: boolean;
   confidence: number;
   wake_word_detected: boolean;
   transcript?: string;
+  state?: VadState;
+  energy_db?: number;
+  smoothed_energy_db?: number;
 }
 
-/** Metrics collected for Week 8 evaluation */
+/** Metrics collected for Phase 2 evaluation */
 export interface VoiceMetrics {
   total_activations: number;
   true_activations: number;
@@ -119,4 +140,8 @@ export interface VoiceMetrics {
   missed_commands: number;
   avg_latency_ms: number;
   latency_samples: number[];
+  vad_activations?: number;
+  vad_false_activations?: number;
+  stt_active_ms?: number;
+  stt_inactive_ms?: number;
 }
