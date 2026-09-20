@@ -673,7 +673,11 @@ export class VoiceController {
 
   constructor(
     private readonly api: ApiClient,
-    private readonly context: vscode.ExtensionContext
+    private readonly context: vscode.ExtensionContext,
+    private readonly findingsProvider?: {
+      getFindings(): import('./types').Finding[];
+      getFocusedFinding?(): import('./types').Finding | undefined;
+    }
   ) {
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
@@ -791,10 +795,10 @@ export class VoiceController {
     this.metrics.recordActivation(true);
     this.updateStatusBar('processing');
 
-    // ── Step 3: Parse intent ──────────────────────────────────────────────
-    const commandType = parseVoiceCommand(transcript);
+    // ── Step 3: Parse intent (full intent with entities, not just command type) ─
+    const intent = parseVoiceIntent(transcript);
 
-    if (commandType === 'unknown') {
+    if (intent.command === 'unknown') {
       this.metrics.recordMissedCommand();
       this.speak('I didn\'t recognise that command. Try: review, explain, show critical, generate fix, accept, or reject.');
       this.updateStatusBar('listening');
@@ -807,13 +811,16 @@ export class VoiceController {
     const editor = vscode.window.activeTextEditor;
     const cmd: VoiceCommand = {
       transcript,
-      command: commandType,
+      command: intent.command,
       file_path: editor?.document.uri.fsPath,
       code_context: editor?.document.getText(),
+      finding_index: intent.finding_index,
+      severity: intent.severity,
+      target: intent.target,
     };
 
     try {
-      await this.executeVoiceCommand(commandType, cmd);
+      await this.executeVoiceCommand(intent, cmd);
       const latency = Date.now() - t0;
       this.metrics.recordLatency(latency);
     } catch (err) {
@@ -865,39 +872,69 @@ export class VoiceController {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private async executeVoiceCommand(
-    type: VoiceCommandType,
+    intent: ParsedVoiceIntent,
     cmd: VoiceCommand
   ): Promise<void> {
-    switch (type) {
+    switch (intent.command) {
       case 'review':
         this.speak('Starting code review.');
         await vscode.commands.executeCommand('aiReview.reviewFile');
         break;
 
-      case 'explain':
-        this.speak('Explaining the top finding.');
-        await vscode.commands.executeCommand('aiReview.explainFinding');
+      case 'explain': {
+        const finding = this.resolveTargetFinding(intent);
+        if (!finding) {
+          this.speak('No finding is selected. Please navigate to a finding first, or say "explain finding" followed by a number.');
+          vscode.window.showWarningMessage('Voice: No finding selected to explain.');
+        } else {
+          this.speak(`Explaining finding: ${finding.title}.`);
+          await vscode.commands.executeCommand('aiReview.explainFinding', finding);
+        }
         break;
+      }
 
-      case 'show_critical':
-        this.speak('Showing critical findings.');
+      case 'show_critical': {
+        const severity = intent.severity ?? 'critical';
+        this.speak(`Showing ${severity} findings.`);
         await vscode.commands.executeCommand('aiReview.showCritical');
         break;
+      }
 
-      case 'generate_fix':
-        this.speak('Generating a fix suggestion.');
-        await vscode.commands.executeCommand('aiReview.generateFix');
+      case 'generate_fix': {
+        const finding = this.resolveTargetFinding(intent);
+        if (!finding) {
+          this.speak('No finding is selected. Please navigate to a finding first, or say "fix finding" followed by a number.');
+          vscode.window.showWarningMessage('Voice: No finding selected to fix.');
+        } else {
+          this.speak(`Generating a fix for: ${finding.title}.`);
+          await vscode.commands.executeCommand('aiReview.generateFix', finding);
+        }
         break;
+      }
 
-      case 'accept':
-        this.speak('Which finding do you want to accept? Opening findings panel.');
-        await vscode.commands.executeCommand('aiReview.openPanel');
+      case 'accept': {
+        const finding = this.resolveTargetFinding(intent);
+        if (!finding) {
+          this.speak('No finding is selected. Please say "accept finding" followed by a number, or navigate to a finding first.');
+          vscode.window.showWarningMessage('Voice: No finding selected to accept.');
+        } else {
+          this.speak(`Accepting finding: ${finding.title}.`);
+          await vscode.commands.executeCommand('aiReview.acceptFinding', finding);
+        }
         break;
+      }
 
-      case 'reject':
-        this.speak('Which finding do you want to reject? Opening findings panel.');
-        await vscode.commands.executeCommand('aiReview.openPanel');
+      case 'reject': {
+        const finding = this.resolveTargetFinding(intent);
+        if (!finding) {
+          this.speak('No finding is selected. Please say "reject finding" followed by a number, or navigate to a finding first.');
+          vscode.window.showWarningMessage('Voice: No finding selected to reject.');
+        } else {
+          this.speak(`Rejecting finding: ${finding.title}.`);
+          await vscode.commands.executeCommand('aiReview.rejectFinding', finding);
+        }
         break;
+      }
     }
 
     try {
@@ -905,6 +942,39 @@ export class VoiceController {
     } catch {
       // Non-critical — continue even if backend call fails
     }
+  }
+
+  /**
+   * Resolve a Finding object from a parsed voice intent.
+   *
+   * Resolution order:
+   * 1. `finding_index` (1-based, user-visible) — converts to 0-based array index.
+   * 2. `target === 'current_finding'` — uses the currently focused finding (set by
+   *    the last `aiReview.navigateToFinding` invocation in extension.ts).
+   * 3. No target specified — returns undefined; caller must provide voice feedback.
+   *
+   * The 1-based → 0-based conversion is performed here and ONLY here.
+   */
+  private resolveTargetFinding(intent: ParsedVoiceIntent): import('./types').Finding | undefined {
+    const findings = this.findingsProvider?.getFindings() ?? [];
+
+    if (intent.finding_index !== undefined) {
+      // User said "finding 3" → 1-based → convert to 0-based
+      const zeroIdx = intent.finding_index - 1;
+      if (zeroIdx >= 0 && zeroIdx < findings.length) {
+        return findings[zeroIdx];
+      }
+      // Index out of range — no silent guess
+      return undefined;
+    }
+
+    if (intent.target === 'current_finding') {
+      // Return the real focused/selected finding if one exists.
+      // Do NOT silently guess findings[0].
+      return this.findingsProvider?.getFocusedFinding?.();
+    }
+
+    return undefined;
   }
 
   /** Text-to-Speech via webview postMessage */

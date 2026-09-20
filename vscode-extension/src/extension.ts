@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
   findingsProvider = new FindingsProvider();
   decorationManager = new DecorationManager();
   reviewPanel = new ReviewPanel(context);
-  voiceController = new VoiceController(api, context);
+  voiceController = new VoiceController(api, context, findingsProvider);
 
   // ── Register sidebar tree view ────────────────────────────────────────────
   const treeView = vscode.window.createTreeView('aiReview.findingsView', {
@@ -198,6 +198,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (selected) {
         focusedFinding = selected.finding;
+        findingsProvider.setFocusedFinding(selected.finding);
         await vscode.commands.executeCommand(
           'aiReview.navigateToFinding',
           selected.finding
@@ -261,6 +262,7 @@ export function activate(context: vscode.ExtensionContext): void {
       'aiReview.navigateToFinding',
       async (finding: Finding) => {
         focusedFinding = finding;
+        findingsProvider.setFocusedFinding(finding);
         const folders = vscode.workspace.workspaceFolders;
         if (!folders) { return; }
 
@@ -437,7 +439,7 @@ function applyDecorationsToActiveEditor(findings: Finding[]): void {
  * a string finding ID, or nothing (use focusedFinding).
  */
 function resolveFinding(arg?: Finding | string): Finding | undefined {
-  if (!arg) { return focusedFinding; }
+  if (!arg) { return findingsProvider.getFocusedFinding() ?? focusedFinding; }
   if (typeof arg === 'string') {
     return findingsProvider.getFindings().find((f) => f.id === arg);
   }

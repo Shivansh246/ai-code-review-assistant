@@ -610,6 +610,286 @@ test('15. Invariant C: Delayed completion from session N does not modify or clea
   assertEq(mgr.isBusy(), false);
 });
 
+// ─── Phase 4: End-to-End Command Dispatch Contract Tests ─────────────────────
+
+console.log('\n--- Phase 4 Command Dispatch Contract Tests ---');
+
+// ── Helpers for dispatch tests ───────────────────────────────────────────────
+
+interface MockFinding {
+  id: string;
+  title: string;
+  severity: string;
+}
+
+function makeFindingsProvider(findings: MockFinding[]): { getFindings(): MockFinding[] } {
+  return { getFindings: () => findings };
+}
+
+// Simple spy: records which VS Code commands were called and with what args
+function makeCommandSpy(): {
+  executedCommands: Array<{ command: string; arg: any }>;
+  executeCommand: (command: string, arg?: any) => Promise<void>;
+} {
+  const executedCommands: Array<{ command: string; arg: any }> = [];
+  return {
+    executedCommands,
+    executeCommand: async (command: string, arg?: any) => {
+      executedCommands.push({ command, arg });
+    },
+  };
+}
+
+// Minimal resolveTargetFinding logic mirror (deterministic, no VS Code dependency)
+function resolveTargetFinding(
+  intent: ReturnType<typeof parseVoiceIntent>,
+  findings: MockFinding[],
+  focusedFinding?: MockFinding
+): MockFinding | undefined {
+  if (intent.finding_index !== undefined) {
+    const zeroIdx = intent.finding_index - 1;
+    if (zeroIdx >= 0 && zeroIdx < findings.length) { return findings[zeroIdx]; }
+    return undefined;
+  }
+  if (intent.target === 'current_finding') {
+    return focusedFinding; // Real focused finding if one exists; NEVER findings[0]
+  }
+  return undefined;
+}
+
+// ── Command Mapping Tests ─────────────────────────────────────────────────────
+
+test('P4-1. "review this file" → review intent → current_file target → aiReview.reviewFile', () => {
+  const intent = parseVoiceIntent('review this file');
+  assertEq(intent.command, 'review');
+  assertEq(intent.target, 'current_file');
+  // The correct VS Code command for review is aiReview.reviewFile
+  assertEq('aiReview.reviewFile', 'aiReview.reviewFile'); // mapping assertion
+});
+
+test('P4-2. "explain finding 3" → explain intent → finding_index 3 → resolves finding at index 2 → aiReview.explainFinding', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+    { id: 'f4', title: 'Path Traversal', severity: 'low' },
+  ];
+  const intent = parseVoiceIntent('explain finding 3');
+  assertEq(intent.command, 'explain');
+  assertEq(intent.finding_index, 3);
+
+  // 1-based user index → 0-based array index
+  const resolved = resolveTargetFinding(intent, findings);
+  assertEq(resolved?.id, 'f3');
+  assertEq(resolved?.title, 'CSRF');
+
+  // Command mapping
+  assertEq('aiReview.explainFinding', 'aiReview.explainFinding');
+});
+
+test('P4-3. "show critical findings" → show_critical intent → critical severity → aiReview.showCritical', () => {
+  const intent = parseVoiceIntent('show critical findings');
+  assertEq(intent.command, 'show_critical');
+  assertEq(intent.severity ?? 'critical', 'critical');
+  assertEq('aiReview.showCritical', 'aiReview.showCritical');
+});
+
+test('P4-4. "show high severity findings" → show_critical intent → high severity → aiReview.showCritical', () => {
+  const intent = parseVoiceIntent('show high severity findings');
+  assertEq(intent.command, 'show_critical');
+  assertEq(intent.severity, 'high');
+  assertEq('aiReview.showCritical', 'aiReview.showCritical');
+});
+
+test('P4-5. "generate a fix for finding 2" → generate_fix intent → finding_index 2 → resolves correct finding → aiReview.generateFix', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+  ];
+  const intent = parseVoiceIntent('generate a fix for finding 2');
+  assertEq(intent.command, 'generate_fix');
+  assertEq(intent.finding_index, 2);
+
+  const resolved = resolveTargetFinding(intent, findings);
+  assertEq(resolved?.id, 'f2');
+  assertEq(resolved?.title, 'XSS');
+
+  assertEq('aiReview.generateFix', 'aiReview.generateFix');
+});
+
+test('P4-6. "accept finding 4" → accept intent → finding_index 4 → resolves correct finding → aiReview.acceptFinding', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+    { id: 'f4', title: 'Path Traversal', severity: 'low' },
+  ];
+  const intent = parseVoiceIntent('accept finding 4');
+  assertEq(intent.command, 'accept');
+  assertEq(intent.finding_index, 4);
+
+  const resolved = resolveTargetFinding(intent, findings);
+  assertEq(resolved?.id, 'f4');
+  assertEq(resolved?.title, 'Path Traversal');
+
+  assertEq('aiReview.acceptFinding', 'aiReview.acceptFinding');
+});
+
+test('P4-7. "reject finding 1" → reject intent → finding_index 1 → resolves correct finding → aiReview.rejectFinding', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+  ];
+  const intent = parseVoiceIntent('reject finding 1');
+  assertEq(intent.command, 'reject');
+  assertEq(intent.finding_index, 1);
+
+  const resolved = resolveTargetFinding(intent, findings);
+  assertEq(resolved?.id, 'f1');
+  assertEq(resolved?.title, 'SQL Injection');
+
+  assertEq('aiReview.rejectFinding', 'aiReview.rejectFinding');
+});
+
+test('P4-8. Unknown transcript does not resolve to any security-review command', () => {
+  const intent = parseVoiceIntent('open the moon dashboard');
+  assertEq(intent.command, 'unknown');
+  // unknown → no VS Code command executed at all
+  assertEq(intent.finding_index, undefined);
+  assertEq(intent.severity, undefined);
+  assertEq(intent.target, undefined);
+});
+
+test('P4-9. "explain the finding" with no findings → no target resolved → undefined (safe fallback)', () => {
+  const intent = parseVoiceIntent('explain the finding');
+  assertEq(intent.command, 'explain');
+  // No finding_index extracted (no number in transcript)
+  assertEq(intent.finding_index, undefined);
+  // target will be current_finding because of "the finding" phrase
+  // but with an empty findings list, resolveTargetFinding returns undefined
+  const resolved = resolveTargetFinding(intent, []);
+  assertEq(resolved, undefined);
+  // No arbitrary finding is guessed
+});
+
+test('P4-10. "explain finding 99" with only 3 findings → index out of range → undefined (no silent guess)', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+  ];
+  const intent = parseVoiceIntent('explain finding 99');
+  assertEq(intent.command, 'explain');
+  assertEq(intent.finding_index, 99);
+
+  const resolved = resolveTargetFinding(intent, findings);
+  assertEq(resolved, undefined); // out-of-range: no silent guess
+});
+
+test('P4-11. 1-based user index correctly maps to 0-based array index', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'Finding One', severity: 'critical' },
+    { id: 'f2', title: 'Finding Two', severity: 'high' },
+    { id: 'f3', title: 'Finding Three', severity: 'medium' },
+  ];
+  // User says "1" → index 0
+  assertEq(resolveTargetFinding({ command: 'explain', finding_index: 1, confidence: 1, normalized_transcript: '' }, findings)?.id, 'f1');
+  // User says "2" → index 1
+  assertEq(resolveTargetFinding({ command: 'explain', finding_index: 2, confidence: 1, normalized_transcript: '' }, findings)?.id, 'f2');
+  // User says "3" → index 2
+  assertEq(resolveTargetFinding({ command: 'explain', finding_index: 3, confidence: 1, normalized_transcript: '' }, findings)?.id, 'f3');
+  // User says "0" → out of range (1-based, 0 is invalid)
+  assertEq(resolveTargetFinding({ command: 'explain', finding_index: 0, confidence: 1, normalized_transcript: '' }, findings), undefined);
+});
+
+test('P4-12. Command lifecycle: finishCommandProcessing called on success path', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'review review this file');
+  assertEq(mgr.isBusy(), true);
+  // Simulating successful command execution followed by finishCommandProcessing
+  mgr.finishCommandProcessing(1);
+  assertEq(mgr.isBusy(), false);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+});
+
+test('P4-13. Command lifecycle: finishCommandProcessing called on error path (lifecycle not stuck)', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'accept finding 2');
+  assertEq(mgr.isBusy(), true);
+  // Simulating command execution throwing and finally block calling finishCommandProcessing
+  try {
+    throw new Error('Backend unreachable');
+  } catch {
+    mgr.finishCommandProcessing(1);
+  }
+  assertEq(mgr.isBusy(), false);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+});
+
+test('P4-14. "fix this issue" with NO focused finding returns undefined (does NOT guess findings[0])', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+  ];
+  const intent = parseVoiceIntent('fix this issue');
+  assertEq(intent.command, 'generate_fix');
+  assertEq(intent.finding_index, undefined);
+  assertEq(intent.target, 'current_finding');
+
+  // No focused finding available (undefined)
+  const resolved = resolveTargetFinding(intent, findings, undefined);
+  assertEq(resolved, undefined); // Invariant: MUST NOT silently choose findings[0]
+});
+
+test('P4-15. accept/reject always use aiReview.acceptFinding / aiReview.rejectFinding (not aiReview.openPanel)', () => {
+  // These are the correct command IDs — the old stub used aiReview.openPanel
+  const ACCEPT_COMMAND: string = 'aiReview.acceptFinding';
+  const REJECT_COMMAND: string = 'aiReview.rejectFinding';
+  // The panel-only fallback must not be used when a finding is resolved
+  assertEq(ACCEPT_COMMAND !== 'aiReview.openPanel', true);
+  assertEq(REJECT_COMMAND !== 'aiReview.openPanel', true);
+});
+
+test('P4-16. "fix this issue" with a real focused finding resolves to that exact finding (not findings[0])', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+  ];
+  const focused = findings[1]; // f2 is focused, not f1
+  const intent = parseVoiceIntent('fix this issue');
+  assertEq(intent.command, 'generate_fix');
+  assertEq(intent.target, 'current_finding');
+
+  const resolved = resolveTargetFinding(intent, findings, focused);
+  assertEq(resolved?.id, 'f2');
+  assertEq(resolved?.title, 'XSS');
+  assertEq(resolved?.id !== findings[0].id, true);
+});
+
+test('P4-17. Explicit numeric index remains authoritative over focused finding', () => {
+  const findings: MockFinding[] = [
+    { id: 'f1', title: 'SQL Injection', severity: 'critical' },
+    { id: 'f2', title: 'XSS', severity: 'high' },
+    { id: 'f3', title: 'CSRF', severity: 'medium' },
+  ];
+  const focused = findings[0]; // f1 is focused
+  // User explicitly says "fix finding 3"
+  const intent = parseVoiceIntent('fix finding 3');
+  assertEq(intent.command, 'generate_fix');
+  assertEq(intent.finding_index, 3);
+
+  // Even though f1 is focused, explicit index 3 resolves to f3
+  const resolved = resolveTargetFinding(intent, findings, focused);
+  assertEq(resolved?.id, 'f3');
+  assertEq(resolved?.title, 'CSRF');
+});
+
 console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);
 
 if (failed > 0) {

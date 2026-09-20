@@ -63,7 +63,16 @@ export class FindingsProvider
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private findings: Finding[] = [];
+  private focusedFinding: Finding | undefined;
   private _loading = false;
+
+  setFocusedFinding(finding: Finding | undefined): void {
+    this.focusedFinding = finding;
+  }
+
+  getFocusedFinding(): Finding | undefined {
+    return this.focusedFinding;
+  }
 
   setFindings(findings: Finding[]): void {
     this.findings = findings;
@@ -86,6 +95,7 @@ export class FindingsProvider
 
   clear(): void {
     this.findings = [];
+    this.focusedFinding = undefined;
     this._onDidChangeTreeData.fire(undefined);
   }
 
