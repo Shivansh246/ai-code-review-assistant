@@ -50,6 +50,7 @@ import {
   parseVoiceCommand,
   localVad,
   HysteresisVadEngine,
+  SttLifecycleManager,
 } from '../voiceController';
 
 let passed = 0;
@@ -350,6 +351,263 @@ test('triggers VAD deactivation under variable frame intervals (150ms, 260ms -> 
   const res = vad.processFrame(-50.0, 260.0); // 410ms silence >= 400ms
   assertEq(res.is_speech, false);
   assertEq(res.state, 'COMMAND_PROCESSING');
+});
+
+console.log('\n--- Phase 3 STT Lifecycle Unit Tests ---');
+
+test('1. VAD activation starts exactly one STT session with unique ID', () => {
+  const mgr = new SttLifecycleManager();
+  const session1 = mgr.startSession();
+  assertEq(session1 !== null, true);
+  assertEq(session1?.id, 1);
+  assertEq(session1?.state, 'STARTING');
+});
+
+test('2. Duplicate VAD activation cannot start duplicate recognition session while active', () => {
+  const mgr = new SttLifecycleManager();
+  const session1 = mgr.startSession();
+  assertEq(session1?.id, 1);
+  // Attempting to start another session while session1 is STARTING
+  const duplicate = mgr.startSession();
+  assertEq(duplicate, null);
+
+  mgr.onRecognitionStart(1);
+  // Attempting to start another session while session1 is LISTENING
+  const duplicate2 = mgr.startSession();
+  assertEq(duplicate2, null);
+});
+
+test('3. Interim transcript updates text but does NOT dispatch a command', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const interim = mgr.onInterimResult(1, 'review this');
+  assertEq(interim.accepted, true);
+  assertEq(interim.interimText, 'review this');
+  assertEq(mgr.getCurrentSession()?.hasDispatched, false);
+  assertEq(mgr.getCurrentSession()?.state, 'LISTENING');
+});
+
+test('4. Final transcript allows dispatch exactly once', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const finalRes = mgr.onFinalResult(1, 'review current file');
+  assertEq(finalRes.accepted, true);
+  assertEq(finalRes.canDispatch, true);
+  assertEq(finalRes.transcript, 'review current file');
+  assertEq(mgr.getCurrentSession()?.hasDispatched, true);
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+});
+
+test('5. Empty final transcript is ignored safely', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const emptyRes1 = mgr.onFinalResult(1, '');
+  assertEq(emptyRes1.canDispatch, false);
+  assertEq(emptyRes1.accepted, false);
+
+  const emptyRes2 = mgr.onFinalResult(1, '   ');
+  assertEq(emptyRes2.canDispatch, false);
+  assertEq(emptyRes2.accepted, false);
+  assertEq(mgr.getCurrentSession()?.hasDispatched, false);
+});
+
+test('6. Duplicate final callback within the same session does NOT dispatch twice', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const firstFinal = mgr.onFinalResult(1, 'show critical');
+  assertEq(firstFinal.canDispatch, true);
+
+  // Subsequent final callback in the same session
+  const secondFinal = mgr.onFinalResult(1, 'show critical findings');
+  assertEq(secondFinal.accepted, true);
+  assertEq(secondFinal.canDispatch, false); // Guarded: at most one dispatch per session
+});
+
+test('7. Recognition error returns to a safe state (ERROR) and unlocks busy state', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const errorHandled = mgr.onRecognitionError(1, 'audio-capture');
+  assertEq(errorHandled, true);
+  assertEq(mgr.getCurrentSession()?.state, 'ERROR');
+  assertEq(mgr.getCurrentSession()?.error, 'audio-capture');
+  assertEq(mgr.isBusy(), false);
+});
+
+test('8. onend terminates the session and does not auto-restart STT', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+
+  const endHandled = mgr.onRecognitionEnd(1);
+  assertEq(endHandled, true);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+  assertEq(mgr.isBusy(), false);
+});
+
+test('9. Stale callback from session N cannot affect session N+1', () => {
+  const mgr = new SttLifecycleManager();
+  // Session 1
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onRecognitionEnd(1);
+
+  // Session 2 starts
+  const session2 = mgr.startSession();
+  assertEq(session2?.id, 2);
+  mgr.onRecognitionStart(2);
+
+  // Delayed stale callbacks from Session 1 arrive
+  const staleInterim = mgr.onInterimResult(1, 'stale interim');
+  assertEq(staleInterim.accepted, false);
+
+  const staleFinal = mgr.onFinalResult(1, 'stale final command');
+  assertEq(staleFinal.accepted, false);
+  assertEq(staleFinal.canDispatch, false);
+
+  const staleError = mgr.onRecognitionError(1, 'network');
+  assertEq(staleError, false);
+
+  const staleEnd = mgr.onRecognitionEnd(1);
+  assertEq(staleEnd, false);
+
+  // Session 2 remains in LISTENING state, unaffected
+  assertEq(mgr.getCurrentSession()?.id, 2);
+  assertEq(mgr.getCurrentSession()?.state, 'LISTENING');
+});
+
+test('10. Recognition ending without a final result returns safely to IDLE/COMPLETED', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  // Interims occurred, but no final transcript
+  mgr.onInterimResult(1, 'uh... um...');
+  mgr.onRecognitionEnd(1);
+
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+  assertEq(mgr.getCurrentSession()?.hasDispatched, false);
+  assertEq(mgr.isBusy(), false);
+});
+
+test('11. A new VAD activation after a completed session creates a new session', () => {
+  const mgr = new SttLifecycleManager();
+  // Session 1 completed
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'review');
+  mgr.finishCommandProcessing(1);
+  mgr.onRecognitionEnd(1);
+
+  // New VAD activation triggers Session 2
+  const session2 = mgr.startSession();
+  assertEq(session2 !== null, true);
+  assertEq(session2?.id, 2);
+  assertEq(session2?.state, 'STARTING');
+});
+
+test('12. Command processing prevents concurrent STT activation', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'generate fix');
+  // While command is processing:
+  assertEq(mgr.isBusy(), true);
+  const blockedSession = mgr.startSession();
+  assertEq(blockedSession, null); // Blocked
+
+  // Once command processing finishes:
+  mgr.finishCommandProcessing(1);
+  assertEq(mgr.isBusy(), false);
+  const allowedSession = mgr.startSession();
+  assertEq(allowedSession !== null, true);
+  assertEq(allowedSession?.id, 2);
+});
+
+test('13. Invariant A & E: Web Speech onend during PROCESSING preserves PROCESSING state until finishCommandProcessing', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'review file');
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+  assertEq(mgr.isBusy(), true);
+
+  // Web Speech recognition ends while command/backend is still executing asynchronously
+  const endHandled = mgr.onRecognitionEnd(1);
+  assertEq(endHandled, true);
+  // State MUST remain PROCESSING (not prematurely set to COMPLETED)
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+  assertEq(mgr.getCurrentSession()?.id, 1);
+  assertEq(mgr.isBusy(), true);
+
+  // When command processing completes, session safely transitions to COMPLETED
+  mgr.finishCommandProcessing(1);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+  assertEq(mgr.isBusy(), false);
+});
+
+test('14. Invariant B: VAD activation is blocked while previous command is PROCESSING, even after onend', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'explain finding');
+  mgr.onRecognitionEnd(1); // Recognition ended, but backend command still running
+
+  // VAD tries to trigger session 2 while session 1 is still PROCESSING
+  const blockedSession = mgr.startSession();
+  assertEq(blockedSession, null);
+  assertEq(mgr.getCurrentSession()?.id, 1);
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+
+  // Backend command completes
+  mgr.finishCommandProcessing(1);
+  assertEq(mgr.isBusy(), false);
+
+  // Now VAD trigger succeeds
+  const newSession = mgr.startSession();
+  assertEq(newSession !== null, true);
+  assertEq(newSession?.id, 2);
+  assertEq(newSession?.state, 'STARTING');
+});
+
+test('15. Invariant C: Delayed completion from session N does not modify or clear active session N+1', () => {
+  const mgr = new SttLifecycleManager();
+  // Session 1 runs and finishes recognition
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'show critical');
+  mgr.onRecognitionEnd(1);
+
+  // Suppose session 1 is completed and session 2 starts
+  mgr.finishCommandProcessing(1);
+  const session2 = mgr.startSession();
+  assertEq(session2?.id, 2);
+  mgr.onRecognitionStart(2);
+  mgr.onFinalResult(2, 'accept finding 1');
+  assertEq(mgr.getCurrentSession()?.id, 2);
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+
+  // A stale or delayed completion callback for session 1 arrives
+  mgr.finishCommandProcessing(1);
+
+  // Session 2 MUST remain completely unaffected (still PROCESSING, still busy)
+  assertEq(mgr.getCurrentSession()?.id, 2);
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+  assertEq(mgr.isBusy(), true);
+
+  // When Session 2's genuine completion arrives, it cleanly completes
+  mgr.finishCommandProcessing(2);
+  assertEq(mgr.getCurrentSession()?.id, 2);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+  assertEq(mgr.isBusy(), false);
 });
 
 console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);

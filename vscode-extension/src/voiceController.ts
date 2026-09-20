@@ -4,6 +4,8 @@
  *
  * Phase 1: Hardened deterministic intent parser.
  * Phase 2: Local Pre-STT energy-based VAD gate (SpeechRecognition stopped during silence).
+ * Phase 3: Robust Speech-to-Text (STT) lifecycle with session isolation, stale callback
+ *          guards, single-dispatch invariants, and safe error/end recovery.
  *
  * Architecture:
  *   Browser MediaRecorder (in webview) ──audio stream──►  AudioContext / AnalyserNode
@@ -12,10 +14,10 @@
  *   Local Hysteresis VAD Gate  (Energy dB moving average + ON/OFF thresholds)
  *     │ passes VAD? (Speech ON)
  *     ▼
- *   STT Activation  (SpeechRecognition.start() triggered ONLY after VAD gate)
+ *   STT Session Initiation  (Unique Session ID created; SpeechRecognition starts)
  *     │
  *     ▼
- *   STT Transcript  (Emits final text transcript)
+ *   STT Lifecycle Manager  (Filters stale callbacks, interim vs final, single dispatch)
  *     │
  *     ▼
  *   Wake-word Check  (Transcript-level keyword filter)
@@ -37,9 +39,11 @@ import {
   VadState,
   VadConfig,
   VoiceMetrics,
+  SttSessionState,
+  SttSession,
 } from './types';
 
-// ─── Metrics (Phase 2 Extended) ─────────────────────────────────────────────
+// ─── Metrics (Phase 2 & 3 Extended) ─────────────────────────────────────────
 
 export class VoiceMetricsTracker {
   private metrics: VoiceMetrics = {
@@ -277,6 +281,185 @@ export function localVad(
   };
 }
 
+// ─── STT Lifecycle Manager (Phase 3) ────────────────────────────────────────
+
+/**
+ * Deterministic manager for the SpeechRecognition lifecycle.
+ * Ensures session isolation, guards against stale callbacks, enforces that at most
+ * one voice command is dispatched per session, and safely handles error and completion states.
+ */
+export class SttLifecycleManager {
+  private currentSession: SttSession | null = null;
+  private sessionCounter: number = 0;
+  private isProcessingCommand: boolean = false;
+
+  /**
+   * Start a new STT session triggered by VAD activation.
+   * Returns the new session or null if a session is already active or a command is processing.
+   */
+  public startSession(timestamp: number = Date.now()): SttSession | null {
+    if (this.isProcessingCommand) {
+      return null;
+    }
+    if (
+      this.currentSession &&
+      (this.currentSession.state === 'STARTING' ||
+        this.currentSession.state === 'LISTENING' ||
+        this.currentSession.state === 'PROCESSING')
+    ) {
+      return null; // Prevent duplicate session start while already active
+    }
+
+    this.sessionCounter++;
+    const session: SttSession = {
+      id: this.sessionCounter,
+      state: 'STARTING',
+      hasDispatched: false,
+      transcript: '',
+      createdAt: timestamp,
+    };
+    this.currentSession = session;
+    return session;
+  }
+
+  /**
+   * Called when SpeechRecognition successfully starts (`onstart`).
+   * Ignores stale callbacks from obsolete sessions.
+   */
+  public onRecognitionStart(sessionId: number): boolean {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return false; // Stale callback
+    }
+    if (this.currentSession.state !== 'STARTING') {
+      return false;
+    }
+    this.currentSession.state = 'LISTENING';
+    return true;
+  }
+
+  /**
+   * Called on interim recognition results (`onresult` with `!isFinal`).
+   * Updates interim transcript but NEVER allows command dispatch.
+   */
+  public onInterimResult(
+    sessionId: number,
+    interimText: string
+  ): { accepted: boolean; interimText?: string } {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return { accepted: false }; // Stale
+    }
+    if (this.currentSession.state !== 'LISTENING' && this.currentSession.state !== 'STARTING') {
+      return { accepted: false };
+    }
+    this.currentSession.transcript = interimText;
+    return { accepted: true, interimText };
+  }
+
+  /**
+   * Called on final recognition results (`onresult` with `isFinal`).
+   * Ensures:
+   * 1. Stale sessions are ignored.
+   * 2. Empty final results are ignored.
+   * 3. At most one command is dispatched per session (`hasDispatched` guard).
+   */
+  public onFinalResult(
+    sessionId: number,
+    finalText: string
+  ): { accepted: boolean; canDispatch: boolean; transcript: string } {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return { accepted: false, canDispatch: false, transcript: '' }; // Stale callback
+    }
+
+    const trimmed = (finalText || '').trim();
+    if (!trimmed) {
+      return { accepted: false, canDispatch: false, transcript: '' }; // Empty final ignored
+    }
+
+    if (this.currentSession.hasDispatched) {
+      return { accepted: true, canDispatch: false, transcript: trimmed }; // Already dispatched for this session
+    }
+
+    if (this.currentSession.state !== 'LISTENING' && this.currentSession.state !== 'STARTING') {
+      return { accepted: false, canDispatch: false, transcript: '' };
+    }
+
+    this.currentSession.hasDispatched = true;
+    this.currentSession.transcript = trimmed;
+    this.currentSession.state = 'PROCESSING';
+    this.isProcessingCommand = true;
+
+    return { accepted: true, canDispatch: true, transcript: trimmed };
+  }
+
+  /**
+   * Called on SpeechRecognition error (`onerror`).
+   * Cleanly transitions session to ERROR state and unlocks command processing.
+   */
+  public onRecognitionError(sessionId: number, error: string): boolean {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return false; // Stale error
+    }
+    this.currentSession.state = 'ERROR';
+    this.currentSession.error = error;
+    this.currentSession.endedAt = Date.now();
+    this.isProcessingCommand = false;
+    return true;
+  }
+
+  /**
+   * Called when SpeechRecognition ends (`onend`).
+   * Does NOT auto-restart.
+   * If session is currently PROCESSING a command, preserves PROCESSING state
+   * until finishCommandProcessing() is called.
+   * If not PROCESSING and not in ERROR (e.g. LISTENING without dispatch), marks COMPLETED.
+   */
+  public onRecognitionEnd(sessionId: number): boolean {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return false; // Stale onend
+    }
+    if (this.currentSession.state !== 'PROCESSING' && this.currentSession.state !== 'ERROR') {
+      this.currentSession.state = 'COMPLETED';
+    }
+    this.currentSession.endedAt = Date.now();
+    return true;
+  }
+
+  /**
+   * Complete command processing after dispatch finishes or fails.
+   */
+  public finishCommandProcessing(sessionId?: number): void {
+    if (this.currentSession && sessionId !== undefined && this.currentSession.id !== sessionId) {
+      // Stale completion from an earlier session; do not modify active session
+      return;
+    }
+    this.isProcessingCommand = false;
+    if (this.currentSession && (!sessionId || this.currentSession.id === sessionId)) {
+      if (this.currentSession.state === 'PROCESSING') {
+        this.currentSession.state = 'COMPLETED';
+      }
+    }
+  }
+
+  public getCurrentSession(): SttSession | null {
+    return this.currentSession ? { ...this.currentSession } : null;
+  }
+
+  public isBusy(): boolean {
+    return (
+      this.isProcessingCommand ||
+      (this.currentSession !== null &&
+        (this.currentSession.state === 'STARTING' ||
+          this.currentSession.state === 'LISTENING' ||
+          this.currentSession.state === 'PROCESSING'))
+    );
+  }
+
+  public reset(): void {
+    this.currentSession = null;
+    this.isProcessingCommand = false;
+  }
+}
+
 // ─── Command Parser (Phase 1 Hardened) ──────────────────────────────────────
 
 export function normalizeTranscript(raw: string): string {
@@ -476,13 +659,15 @@ export function parseVoiceCommand(transcript: string): VoiceCommandType {
   return parseVoiceIntent(transcript).command;
 }
 
-// ─── Voice Controller (Phase 2 Pre-STT Gate) ────────────────────────────────
+// ─── Voice Controller (Phase 2 & 3 Robust Lifecycle) ────────────────────────
 
 export class VoiceController {
   private statusBarItem: vscode.StatusBarItem;
   private isListening = false;
   private wakeWord: string;
   private vadEngine: HysteresisVadEngine;
+  private sttLifecycle = new SttLifecycleManager();
+  private lastProcessedSessionId: number = -1;
   private metrics = new VoiceMetricsTracker();
   private activePanel: vscode.WebviewPanel | undefined;
 
@@ -534,7 +719,7 @@ export class VoiceController {
     this.updateStatusBar('listening');
     this.openVoicePanel();
     vscode.window.showInformationMessage(
-      `🎙 Voice active (Local VAD Gate). Say "${this.wakeWord}" to trigger a command.`
+      `🎙 Voice active (VAD + STT Lifecycle Gate). Say "${this.wakeWord}" to trigger a command.`
     );
   }
 
@@ -542,6 +727,7 @@ export class VoiceController {
   stop(): void {
     this.isListening = false;
     this.updateStatusBar('idle');
+    this.sttLifecycle.reset();
     this.activePanel?.dispose();
     vscode.window.showInformationMessage('🔇 Voice control stopped.');
   }
@@ -552,8 +738,21 @@ export class VoiceController {
    */
   async processTranscript(
     transcript: string,
-    audioEnergyDb: number
+    audioEnergyDb: number,
+    sessionId?: number
   ): Promise<void> {
+    if (!transcript || !transcript.trim()) {
+      return; // Ignore empty/whitespace transcripts
+    }
+
+    // Invariant: at most one voice command dispatched per STT session
+    if (sessionId !== undefined) {
+      if (this.lastProcessedSessionId === sessionId) {
+        return; // Guard against duplicate dispatch for the same session
+      }
+      this.lastProcessedSessionId = sessionId;
+    }
+
     const t0 = Date.now();
 
     // ── Step 1: Local VAD check ────────────────────────────────────────────
@@ -571,6 +770,8 @@ export class VoiceController {
 
     if (!vad.is_speech) {
       // Background noise / silence — skip silently
+      this.sttLifecycle.finishCommandProcessing(sessionId);
+      this.notifyWebviewCommandCompleted(sessionId);
       return;
     }
 
@@ -582,6 +783,8 @@ export class VoiceController {
     if (!wakeWordFound) {
       this.metrics.recordActivation(false);
       this.metrics.recordVadActivation(true); // VAD passed but wake word missing
+      this.sttLifecycle.finishCommandProcessing(sessionId);
+      this.notifyWebviewCommandCompleted(sessionId);
       return;
     }
 
@@ -595,6 +798,8 @@ export class VoiceController {
       this.metrics.recordMissedCommand();
       this.speak('I didn\'t recognise that command. Try: review, explain, show critical, generate fix, accept, or reject.');
       this.updateStatusBar('listening');
+      this.sttLifecycle.finishCommandProcessing(sessionId);
+      this.notifyWebviewCommandCompleted(sessionId);
       return;
     }
 
@@ -616,6 +821,8 @@ export class VoiceController {
         `Voice command failed: ${ApiClient.formatError(err)}`
       );
     } finally {
+      this.sttLifecycle.finishCommandProcessing(sessionId);
+      this.notifyWebviewCommandCompleted(sessionId);
       this.updateStatusBar('listening');
     }
   }
@@ -644,6 +851,10 @@ export class VoiceController {
 
   getMetrics(): VoiceMetricsTracker {
     return this.metrics;
+  }
+
+  getSttLifecycle(): SttLifecycleManager {
+    return this.sttLifecycle;
   }
 
   dispose(): void {
@@ -701,6 +912,13 @@ export class VoiceController {
     this.activePanel?.webview.postMessage({ type: 'speak', text });
   }
 
+  private notifyWebviewCommandCompleted(sessionId?: number): void {
+    this.activePanel?.webview.postMessage({
+      type: 'commandCompleted',
+      sessionId,
+    });
+  }
+
   private updateStatusBar(state: 'idle' | 'listening' | 'processing'): void {
     const icons = { idle: '$(mic)', listening: '$(radio-tower)', processing: '$(loading~spin)' };
     const labels = { idle: 'AI Voice', listening: 'Listening (VAD Gate)…', processing: 'Processing…' };
@@ -715,7 +933,7 @@ export class VoiceController {
   private openVoicePanel(): void {
     this.activePanel = vscode.window.createWebviewPanel(
       'aiReviewVoice',
-      '🎙 Voice Commands (Pre-STT Gate)',
+      '🎙 Voice Commands (VAD + STT Gate)',
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true }
     );
@@ -735,7 +953,8 @@ export class VoiceController {
       if (msg.type === 'transcript') {
         await this.processTranscript(
           msg.transcript as string,
-          msg.energyDb as number
+          msg.energyDb as number,
+          msg.sessionId as number | undefined
         );
       }
     });
@@ -743,6 +962,7 @@ export class VoiceController {
     this.activePanel.onDidDispose(() => {
       this.isListening = false;
       this.updateStatusBar('idle');
+      this.sttLifecycle.reset();
       this.activePanel = undefined;
     });
   }
@@ -852,40 +1072,56 @@ export class VoiceController {
     let consecutiveOffMs = 0;
     let energyBuffer = [];
     let lastFrameTime = performance.now();
-    let recognitionState = 'STOPPED'; // 'STOPPED' | 'STARTING' | 'RUNNING' | 'STOPPING'
 
-    // ── TTS (Week 7) ──────────────────────────────────────────────────────
+    // Session Isolation & Lifecycle
+    let currentSessionId = 0;
+    let currentSessionState = 'IDLE'; // 'IDLE' | 'STARTING' | 'LISTENING' | 'PROCESSING'
+    let currentSessionDispatched = false;
+
+    // ── Extension Messages (TTS & Command Completion) ────────────────────
     window.addEventListener('message', e => {
       const msg = e.data;
       if (msg.type === 'speak' && msg.text) {
         const utt = new SpeechSynthesisUtterance(msg.text);
         utt.rate = 1.1;
         window.speechSynthesis.speak(utt);
+      } else if (msg.type === 'commandCompleted') {
+        if (!msg.sessionId || msg.sessionId === currentSessionId) {
+          currentSessionState = 'IDLE';
+          isSpeechActive = false;
+          vadState = 'IDLE';
+          const badge = document.getElementById('vad-badge');
+          if (badge) {
+            badge.textContent = 'VAD: IDLE (STT Stopped)';
+            badge.style.background = 'var(--vscode-badge-background)';
+          }
+        }
       }
     });
 
     // ── STT Lifecycle Safe Controls ───────────────────────────────────────
-    function safeStartRecognition() {
+    function safeStartRecognition(sessionId) {
       if (!listening || !recognition) return;
-      if (recognitionState === 'RUNNING' || recognitionState === 'STARTING') return;
+      if (sessionId !== currentSessionId) return; // Stale session guard
       try {
-        recognitionState = 'STARTING';
         recognition.start();
       } catch(e) {
         console.warn('SpeechRecognition start ignored:', e);
-        recognitionState = 'STOPPED';
+        if (sessionId === currentSessionId) {
+          currentSessionState = 'IDLE';
+          isSpeechActive = false;
+          vadState = 'IDLE';
+        }
       }
     }
 
-    function safeStopRecognition() {
+    function safeStopRecognition(sessionId) {
       if (!recognition) return;
-      if (recognitionState === 'STOPPED' || recognitionState === 'STOPPING') return;
+      if (sessionId && sessionId !== currentSessionId) return; // Stale stop guard
       try {
-        recognitionState = 'STOPPING';
         recognition.stop();
       } catch(e) {
         console.warn('SpeechRecognition stop ignored:', e);
-        recognitionState = 'STOPPED';
       }
     }
 
@@ -944,11 +1180,17 @@ export class VoiceController {
       const badge = document.getElementById('vad-badge');
       if (!isSpeechActive) {
         if (consecutiveOnMs >= VAD_ON_MS) {
-          isSpeechActive = true;
-          vadState = 'VOICE_DETECTED';
-          badge.textContent = 'VAD: Speech Detected (Triggering STT)';
-          badge.style.background = '#00c853';
-          safeStartRecognition();
+          // Only start a new session if currently IDLE
+          if (currentSessionState === 'IDLE') {
+            currentSessionId++;
+            currentSessionState = 'STARTING';
+            currentSessionDispatched = false;
+            isSpeechActive = true;
+            vadState = 'VOICE_DETECTED';
+            badge.textContent = 'VAD: Speech Detected (Session #' + currentSessionId + ')';
+            badge.style.background = '#00c853';
+            safeStartRecognition(currentSessionId);
+          }
         } else {
           vadState = 'IDLE';
           badge.textContent = 'VAD: IDLE (STT Stopped)';
@@ -960,10 +1202,10 @@ export class VoiceController {
           vadState = 'COMMAND_PROCESSING';
           badge.textContent = 'VAD: Hangover Expired (Stopping STT)';
           badge.style.background = 'var(--vscode-badge-background)';
-          safeStopRecognition();
+          safeStopRecognition(currentSessionId);
         } else {
           vadState = 'ACTIVE_LISTENING';
-          badge.textContent = 'VAD: Active Listening';
+          badge.textContent = 'VAD: Active Listening (Session #' + currentSessionId + ')';
           badge.style.background = '#ff6d00';
         }
       }
@@ -986,7 +1228,7 @@ export class VoiceController {
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
-        recognitionState = 'RUNNING';
+        currentSessionState = 'LISTENING';
         document.getElementById('status').classList.add('active');
       };
 
@@ -1001,26 +1243,44 @@ export class VoiceController {
         const display = final || interim;
         document.getElementById('transcript').textContent = display;
 
-        if (final) {
+        const trimmedFinal = final ? final.trim() : '';
+        // Invariant: only non-empty final result dispatches, and at most once per session
+        if (trimmedFinal && !currentSessionDispatched) {
+          currentSessionDispatched = true;
+          currentSessionState = 'PROCESSING';
           const energyDb = getEnergyDb();
-          vscode.postMessage({ type: 'transcript', transcript: final.trim(), energyDb, vadState: 'COMMAND_PROCESSING' });
-          safeStopRecognition();
+          vscode.postMessage({
+            type: 'transcript',
+            transcript: trimmedFinal,
+            energyDb,
+            sessionId: currentSessionId,
+            vadState: 'COMMAND_PROCESSING'
+          });
+          safeStopRecognition(currentSessionId);
           isSpeechActive = false;
           vadState = 'IDLE';
         }
       };
 
       recognition.onerror = (e) => {
-        recognitionState = 'STOPPED';
+        currentSessionState = 'IDLE';
+        isSpeechActive = false;
+        vadState = 'IDLE';
+        document.getElementById('status').classList.remove('active');
         if (e.error !== 'no-speech') {
           document.getElementById('transcript').textContent = 'Error: ' + e.error;
         }
       };
 
       recognition.onend = () => {
-        recognitionState = 'STOPPED';
+        // If we dispatched a command and are awaiting completion, remain in PROCESSING
+        if (currentSessionState !== 'PROCESSING') {
+          currentSessionState = 'IDLE';
+          isSpeechActive = false;
+          vadState = 'IDLE';
+        }
         document.getElementById('status').classList.remove('active');
-        // STT remains STOPPED until VAD detects speech again
+        // STT remains STOPPED. No automatic restart loop!
       };
     }
 
@@ -1030,9 +1290,10 @@ export class VoiceController {
         listening ? 'Stop Listening' : 'Start Listening';
       document.getElementById('status').classList.toggle('active', listening);
       if (!listening) {
-        safeStopRecognition();
+        safeStopRecognition(currentSessionId);
         isSpeechActive = false;
         vadState = 'IDLE';
+        currentSessionState = 'IDLE';
       }
     }
 

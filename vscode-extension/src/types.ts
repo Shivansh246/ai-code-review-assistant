@@ -83,6 +83,7 @@ export interface VoiceCommand {
   finding_index?: number;       // 1-indexed finding number if specified (e.g. "accept finding 3")
   severity?: 'critical' | 'high';
   target?: string;              // 'current_file' | 'current_finding' | 'finding_index'
+  session_id?: number;
 }
 
 export interface ParsedVoiceIntent {
@@ -144,4 +145,24 @@ export interface VoiceMetrics {
   vad_false_activations?: number;
   stt_active_ms?: number;
   stt_inactive_ms?: number;
+}
+
+/** STT Session State (Phase 3) */
+export type SttSessionState =
+  | 'IDLE'
+  | 'STARTING'
+  | 'LISTENING'
+  | 'PROCESSING'
+  | 'ERROR'
+  | 'COMPLETED';
+
+/** STT Session Model */
+export interface SttSession {
+  id: number;
+  state: SttSessionState;
+  hasDispatched: boolean;
+  transcript: string;
+  createdAt: number;
+  endedAt?: number;
+  error?: string;
 }
