@@ -93,6 +93,19 @@ export class FindingsProvider
     }
   }
 
+  updateExplanation(explainRes: import('./types').ExplainResponse): void {
+    const f = this.findings.find((f) => f.id === explainRes.finding_id);
+    if (f) {
+      f.explanation = explainRes.explanation;
+      if (explainRes.token_attributions) { f.token_attributions = explainRes.token_attributions; }
+      if (explainRes.risk_score !== undefined) { f.risk_score = explainRes.risk_score; }
+      if (explainRes.score_factors) { f.score_factors = explainRes.score_factors; }
+      if (explainRes.evidence_snippet) { f.evidence_snippet = explainRes.evidence_snippet; }
+      if (explainRes.remediation_rationale) { f.remediation_rationale = explainRes.remediation_rationale; }
+      this._onDidChangeTreeData.fire(undefined);
+    }
+  }
+
   clear(): void {
     this.findings = [];
     this.focusedFinding = undefined;

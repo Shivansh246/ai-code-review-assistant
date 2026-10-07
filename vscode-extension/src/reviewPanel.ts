@@ -78,6 +78,22 @@ export class ReviewPanel {
     this.panel?.dispose();
   }
 
+  /** Update panel when an explanation response is received for a finding */
+  updateExplanation(explainRes: import('./types').ExplainResponse): void {
+    const finding = this.currentFindings.find((f) => f.id === explainRes.finding_id);
+    if (finding) {
+      finding.explanation = explainRes.explanation;
+      if (explainRes.token_attributions) { finding.token_attributions = explainRes.token_attributions; }
+      if (explainRes.risk_score !== undefined) { finding.risk_score = explainRes.risk_score; }
+      if (explainRes.score_factors) { finding.score_factors = explainRes.score_factors; }
+      if (explainRes.evidence_snippet) { finding.evidence_snippet = explainRes.evidence_snippet; }
+      if (explainRes.remediation_rationale) { finding.remediation_rationale = explainRes.remediation_rationale; }
+    }
+    if (this.panel) {
+      this.panel.webview.html = this.renderHtml(this.currentFindings, false);
+    }
+  }
+
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   private async navigateToLine(file: string, line: number): Promise<void> {
@@ -145,7 +161,16 @@ export class ReviewPanel {
         <div class="card-title">${escapeHtml(f.title)}</div>
         <div class="card-desc">${escapeHtml(f.description)}</div>
         ${f.cve_id ? `<div class="cve-tag">🔗 ${f.cve_id}${f.package_name ? ` — ${f.package_name}@${f.package_version ?? '?'}` : ''}</div>` : ''}
-        ${f.explanation ? `<div class="explanation">🧠 <strong>XAI:</strong> ${escapeHtml(f.explanation)}</div>` : ''}
+        ${f.explanation ? `<div class="explanation">🧠 <strong>XAI Explanation:</strong> ${escapeHtml(f.explanation)}</div>` : ''}
+        ${f.risk_score !== undefined ? `<div class="risk-badge">🎯 <strong>Risk Score:</strong> ${f.risk_score}/100${f.score_factors ? ` <span class="score-factors">(${Object.entries(f.score_factors).map(([k,v]) => `${k}: ${v}`).join(', ')})</span>` : ''}</div>` : ''}
+        ${f.token_attributions && f.token_attributions.length > 0 ? `
+          <div class="token-chips">
+            <strong>Token Importance:</strong>
+            ${f.token_attributions.map(t => `<span class="chip ${t.importance >= 0 ? 'pos' : 'neg'}">${escapeHtml(t.token)} (${t.importance >= 0 ? '+' : ''}${t.importance.toFixed(2)})</span>`).join(' ')}
+          </div>
+        ` : ''}
+        ${f.evidence_snippet ? `<div class="evidence-block"><strong>Evidence Snippet:</strong><pre class="evidence-snippet"><code>${escapeHtml(f.evidence_snippet)}</code></pre></div>` : ''}
+        ${f.remediation_rationale ? `<div class="remediation">💡 <strong>Remediation Rationale:</strong> ${escapeHtml(f.remediation_rationale)}</div>` : ''}
         ${f.fix_suggestion ? `<pre class="fix-code">${escapeHtml(f.fix_suggestion)}</pre>` : ''}
         <div class="card-actions">
           <button onclick="navigate('${f.file}', ${f.line_start})">Go to line</button>
@@ -243,6 +268,15 @@ export class ReviewPanel {
       background: rgba(180,100,255,0.08);
       margin-bottom: 8px; line-height: 1.5;
     }
+    .risk-badge { font-size: 0.82rem; padding: 6px 10px; border-radius: 4px; background: rgba(255,170,0,0.12); margin-bottom: 8px; }
+    .score-factors { font-size: 0.78rem; opacity: 0.8; font-weight: normal; }
+    .token-chips { font-size: 0.8rem; margin-bottom: 8px; line-height: 1.8; }
+    .chip { font-size: 0.75rem; padding: 2px 6px; border-radius: 3px; font-family: monospace; display: inline-block; margin-right: 4px; }
+    .chip.pos { background: rgba(0,200,80,0.2); color: #00e660; border: 1px solid rgba(0,200,80,0.4); }
+    .chip.neg { background: rgba(180,100,255,0.2); color: #c880ff; border: 1px solid rgba(180,100,255,0.4); }
+    .evidence-block { font-size: 0.8rem; margin-bottom: 8px; }
+    .evidence-snippet { font-family: var(--vscode-editor-font-family, monospace); font-size: 0.78rem; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; overflow-x: auto; white-space: pre; margin-top: 4px; }
+    .remediation { font-size: 0.82rem; padding: 8px; border-radius: 4px; background: rgba(0,150,255,0.1); margin-bottom: 8px; line-height: 1.4; }
     .fix-code {
       font-family: var(--vscode-editor-font-family, monospace);
       font-size: 0.8rem;

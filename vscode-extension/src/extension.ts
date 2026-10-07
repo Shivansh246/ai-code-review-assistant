@@ -141,25 +141,40 @@ export function activate(context: vscode.ExtensionContext): void {
         const finding = resolveFinding(findingOrId);
         if (!finding) {
           vscode.window.showWarningMessage('No finding selected to explain.');
-          return;
+          return undefined;
         }
 
+        let explainResult: import('./types').ExplainResponse | undefined;
+
         await vscode.window.withProgress(
-          { location: vscode.ProgressLocation.Notification, title: 'Getting explanation…' },
+          { location: vscode.ProgressLocation.Notification, title: 'Getting XAI explanation…' },
           async () => {
             try {
               const result = await api.explain(finding.id);
+              explainResult = result;
+
+              // Attach XAI output to finding object without overwriting metadata
               finding.explanation = result.explanation;
               finding.token_attributions = result.token_attributions;
+              finding.risk_score = result.risk_score;
+              finding.score_factors = result.score_factors;
+              finding.evidence_snippet = result.evidence_snippet;
+              finding.remediation_rationale = result.remediation_rationale;
 
-              // Show XAI highlights in editor
+              // Apply line highlights in editor
               const editor = vscode.window.activeTextEditor;
-              if (editor && result.highlighted_lines.length > 0) {
+              if (editor && result.highlighted_lines && result.highlighted_lines.length > 0) {
                 decorationManager.applyXaiHighlights(editor, result.highlighted_lines);
               }
 
+              // Send complete structured explanation to findings provider & ReviewPanel
+              findingsProvider.updateExplanation(result);
+              reviewPanel.open();
+              reviewPanel.updateExplanation(result);
+
+              // Supplementary notification toast (non-primary)
               vscode.window.showInformationMessage(
-                `🧠 Explanation: ${result.explanation.substring(0, 120)}…`
+                `🧠 XAI explanation ready for "${finding.title}".`
               );
             } catch (err) {
               vscode.window.showErrorMessage(
@@ -168,6 +183,8 @@ export function activate(context: vscode.ExtensionContext): void {
             }
           }
         );
+
+        return explainResult;
       }
     )
   );

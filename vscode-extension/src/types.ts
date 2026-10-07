@@ -31,6 +31,10 @@ export interface Finding {
   fix_suggestion?: string;
   token_attributions?: TokenAttribution[];  // XAI token-level importance
   feedback_status?: FeedbackStatus;
+  risk_score?: number;          // XAI risk score
+  score_factors?: Record<string, number>;
+  evidence_snippet?: string;
+  remediation_rationale?: string;
 }
 
 /** Token-level attribution from XAI (Captum) */
@@ -64,6 +68,12 @@ export interface ExplainResponse {
   explanation: string;
   token_attributions?: TokenAttribution[];
   highlighted_lines: number[];
+  rule_id?: string;
+  severity?: Severity | string;
+  risk_score?: number;
+  score_factors?: Record<string, number>;
+  evidence_snippet?: string;
+  remediation_rationale?: string;
 }
 
 /** Response from POST /fix */

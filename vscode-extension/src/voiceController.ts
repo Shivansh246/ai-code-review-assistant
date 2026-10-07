@@ -888,7 +888,21 @@ export class VoiceController {
           vscode.window.showWarningMessage('Voice: No finding selected to explain.');
         } else {
           this.speak(`Explaining finding: ${finding.title}.`);
-          await vscode.commands.executeCommand('aiReview.explainFinding', finding);
+          try {
+            const res = await vscode.commands.executeCommand<import('./types').ExplainResponse | undefined>(
+              'aiReview.explainFinding',
+              finding
+            );
+            if (res && res.risk_score !== undefined) {
+              this.speak(`Explanation ready. ${finding.title} has a risk score of ${Math.round(res.risk_score)} out of 100.`);
+            } else if (res && res.explanation) {
+              this.speak(`Explanation ready for ${finding.title}.`);
+            } else {
+              this.speak(`Explanation ready for ${finding.title}.`);
+            }
+          } catch {
+            this.speak(`Could not retrieve explanation for ${finding.title}.`);
+          }
         }
         break;
       }

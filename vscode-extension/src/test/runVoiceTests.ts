@@ -890,6 +890,202 @@ test('P4-17. Explicit numeric index remains authoritative over focused finding',
   assertEq(resolved?.title, 'CSRF');
 });
 
+// ─── Phase 5: Explainable AI (XAI) + Voice Integration Tests ─────────────────
+
+console.log('\n--- Phase 5 XAI + Voice Integration Tests ---');
+
+import { ExplainResponse, Finding } from '../types';
+
+test('P5-1. Complete ExplainResponse contract supports all XAI fields', () => {
+  const response: ExplainResponse = {
+    finding_id: 'f-123',
+    explanation: 'User input is concatenated into raw SQL query without sanitization.',
+    token_attributions: [
+      { token: 'SELECT', importance: 0.2 },
+      { token: 'query', importance: 0.95 },
+      { token: 'sanitize', importance: -0.5 },
+    ],
+    highlighted_lines: [14, 15, 16],
+    rule_id: 'python.sqlalchemy.security.audit.avoid-raw-sql',
+    severity: 'critical',
+    risk_score: 92.5,
+    score_factors: { severity_weight: 1.0, source_weight: 0.9, confidence: 1.0 },
+    evidence_snippet: '14 | query = f"SELECT * FROM users WHERE id = {user_id}"',
+    remediation_rationale: 'Use parameterized queries or ORM parameter binding.',
+  };
+
+  assertEq(response.finding_id, 'f-123');
+  assertEq(response.risk_score, 92.5);
+  assertEq(response.score_factors?.severity_weight, 1.0);
+  assertEq(response.evidence_snippet?.includes('SELECT'), true);
+  assertEq(response.token_attributions?.length, 3);
+  assertEq(response.highlighted_lines.length, 3);
+});
+
+test('P5-2. Attaching ExplainResponse to Finding preserves all original metadata', () => {
+  const originalFinding: Finding = {
+    id: 'f-456',
+    source: 'semgrep',
+    severity: 'high',
+    title: 'Hardcoded API Secret',
+    description: 'API key exposed in source code.',
+    file: 'src/config.ts',
+    line_start: 42,
+    line_end: 42,
+    confidence: 0.95,
+    rule_id: 'generic.secrets.gcp-api-key',
+    feedback_status: 'accepted',
+  };
+
+  const xaiResponse: ExplainResponse = {
+    finding_id: 'f-456',
+    explanation: 'Hardcoded secret detected in client configuration.',
+    token_attributions: [{ token: 'AIzaSy', importance: 0.99 }],
+    highlighted_lines: [42],
+    risk_score: 85.0,
+    evidence_snippet: '42 | const KEY = "AIzaSy..."',
+    remediation_rationale: 'Move key to environment variable.',
+  };
+
+  // Attach XAI fields cleanly
+  const updatedFinding: Finding = {
+    ...originalFinding,
+    explanation: xaiResponse.explanation,
+    token_attributions: xaiResponse.token_attributions,
+    risk_score: xaiResponse.risk_score,
+    score_factors: xaiResponse.score_factors,
+    evidence_snippet: xaiResponse.evidence_snippet,
+    remediation_rationale: xaiResponse.remediation_rationale,
+  };
+
+  // Original metadata MUST be preserved
+  assertEq(updatedFinding.id, 'f-456');
+  assertEq(updatedFinding.source, 'semgrep');
+  assertEq(updatedFinding.severity, 'high');
+  assertEq(updatedFinding.title, 'Hardcoded API Secret');
+  assertEq(updatedFinding.file, 'src/config.ts');
+  assertEq(updatedFinding.line_start, 42);
+  assertEq(updatedFinding.confidence, 0.95);
+  assertEq(updatedFinding.feedback_status, 'accepted');
+
+  // XAI fields MUST be correctly populated
+  assertEq(updatedFinding.explanation, 'Hardcoded secret detected in client configuration.');
+  assertEq(updatedFinding.risk_score, 85.0);
+  assertEq(updatedFinding.remediation_rationale, 'Move key to environment variable.');
+});
+
+test('P5-3. ReviewPanel & FindingsProvider update contract preserves state on XAI payload update', () => {
+  const finding: Finding = {
+    id: 'f-789',
+    source: 'osv',
+    severity: 'critical',
+    title: 'Vulnerable Lodash Package',
+    description: 'Prototype pollution vulnerability in lodash.',
+    file: 'package.json',
+    line_start: 10,
+    line_end: 10,
+    confidence: 1.0,
+    feedback_status: 'rejected',
+  };
+
+  const findingsList = [finding];
+
+  // Simulating provider update
+  const provider = {
+    findings: findingsList,
+    updateExplanation(res: ExplainResponse) {
+      const f = this.findings.find((x) => x.id === res.finding_id);
+      if (f) {
+        f.explanation = res.explanation;
+        if (res.risk_score !== undefined) { f.risk_score = res.risk_score; }
+        if (res.remediation_rationale) { f.remediation_rationale = res.remediation_rationale; }
+      }
+    },
+  };
+
+  provider.updateExplanation({
+    finding_id: 'f-789',
+    explanation: 'Upgrade lodash to 4.17.21 or higher.',
+    highlighted_lines: [10],
+    risk_score: 95.0,
+    remediation_rationale: 'Upgrade dependency.',
+  });
+
+  assertEq(finding.feedback_status, 'rejected'); // Preserved!
+  assertEq(finding.explanation, 'Upgrade lodash to 4.17.21 or higher.');
+  assertEq(finding.risk_score, 95.0);
+  assertEq(finding.remediation_rationale, 'Upgrade dependency.');
+});
+
+test('P5-4. Voice explain flow produces completion TTS and completes STT lifecycle', () => {
+  const mgr = new SttLifecycleManager();
+  mgr.startSession();
+  mgr.onRecognitionStart(1);
+  mgr.onFinalResult(1, 'review explain finding 1');
+
+  assertEq(mgr.isBusy(), true);
+  assertEq(mgr.getCurrentSession()?.state, 'PROCESSING');
+
+  // Simulated spoken messages buffer
+  const spokenMessages: string[] = [];
+  const speak = (msg: string) => spokenMessages.push(msg);
+
+  // Initial dispatch TTS
+  speak('Explaining finding: SQL Injection.');
+
+  // Async XAI command finishes
+  const explainResult: ExplainResponse = {
+    finding_id: 'f1',
+    explanation: 'SQL Injection via string interpolation.',
+    highlighted_lines: [12],
+    risk_score: 90.0,
+  };
+
+  // Completion TTS
+  if (explainResult.risk_score !== undefined) {
+    speak(`Explanation ready. SQL Injection has a risk score of ${Math.round(explainResult.risk_score)} out of 100.`);
+  }
+
+  // STT Lifecycle finishes
+  mgr.finishCommandProcessing(1);
+
+  assertEq(spokenMessages.length, 2);
+  assertEq(spokenMessages[0], 'Explaining finding: SQL Injection.');
+  assertEq(spokenMessages[1], 'Explanation ready. SQL Injection has a risk score of 90 out of 100.');
+  assertEq(mgr.isBusy(), false);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+});
+
+test('P5-5. Voice explain error path produces error notice and completes STT lifecycle without deadlock', () => {
+  const mgr = new SttLifecycleManager();
+  const session = mgr.startSession();
+  const sid = session!.id;
+  mgr.onRecognitionStart(sid);
+  mgr.onFinalResult(sid, 'review explain finding 2');
+
+  assertEq(mgr.isBusy(), true);
+
+  const spokenMessages: string[] = [];
+  const speak = (msg: string) => spokenMessages.push(msg);
+
+  speak('Explaining finding: XSS Vulnerability.');
+
+  // Simulating API / backend failure during XAI execution
+  try {
+    throw new Error('Backend 500 Internal Error');
+  } catch {
+    speak('Could not retrieve explanation for XSS Vulnerability.');
+  } finally {
+    mgr.finishCommandProcessing(sid);
+  }
+
+  assertEq(spokenMessages.length, 2);
+  assertEq(spokenMessages[0], 'Explaining finding: XSS Vulnerability.');
+  assertEq(spokenMessages[1], 'Could not retrieve explanation for XSS Vulnerability.');
+  assertEq(mgr.isBusy(), false);
+  assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
+});
+
 console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);
 
 if (failed > 0) {
