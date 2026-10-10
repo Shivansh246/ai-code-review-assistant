@@ -138,3 +138,57 @@ async def get_rejection_rate() -> float:
     except Exception as e:
         logger.error(f"Failed to calculate rejection rate: {e}")
         return 0.0
+
+async def get_feedback_stats() -> dict:
+    """
+    Aggregate historical feedback events into rule-specific and source-specific statistics.
+    Returns:
+        {
+            "rule_stats": {
+                "<rule_id>": {"accepted": int, "rejected": int}
+            },
+            "source_stats": {
+                "<source>": {"accepted": int, "rejected": int}
+            }
+        }
+    """
+    stats: dict = {
+        "rule_stats": {},
+        "source_stats": {}
+    }
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("""
+                SELECT f.status, c.data
+                FROM feedback f
+                LEFT JOIN findings_cache c ON f.finding_id = c.id
+            """) as cursor:
+                async for row in cursor:
+                    status_str = row[0]
+                    cache_json = row[1]
+                    if status_str not in ("accepted", "rejected"):
+                        continue
+
+                    rule_id = None
+                    source_val = None
+
+                    if cache_json:
+                        try:
+                            finding_dict = json.loads(cache_json)
+                            rule_id = finding_dict.get("rule_id")
+                            source_val = finding_dict.get("source")
+                        except Exception:
+                            pass
+
+                    if rule_id:
+                        if rule_id not in stats["rule_stats"]:
+                            stats["rule_stats"][rule_id] = {"accepted": 0, "rejected": 0}
+                        stats["rule_stats"][rule_id][status_str] += 1
+
+                    if source_val:
+                        if source_val not in stats["source_stats"]:
+                            stats["source_stats"][source_val] = {"accepted": 0, "rejected": 0}
+                        stats["source_stats"][source_val][status_str] += 1
+    except Exception as e:
+        logger.error(f"Failed to calculate feedback stats: {e}")
+    return stats

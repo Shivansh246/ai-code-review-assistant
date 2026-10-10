@@ -172,8 +172,13 @@ async def review_file(req: ReviewRequest):
     except Exception as e:
         logger.warning("RL priority adjustment skipped: %s", e)
 
-    # Score and rank
-    ranked = scoring.rank_findings(fused)
+    # Score and rank with historical feedback adaptation
+    try:
+        fb_stats = await feedback.get_feedback_stats()
+        ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+    except Exception as e:
+        logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
+        ranked = scoring.rank_findings(fused)
 
     # Cache findings for later lookup (explain, fix)
     for f in ranked:
@@ -227,10 +232,16 @@ async def review_repo(req: RepoReviewRequest):
         logger.warning("OSV repo scan failed: %s", osv_findings)
 
     fused = await fusion.fuse_findings(all_findings)
-    ranked = scoring.rank_findings(fused)
+    try:
+        fb_stats = await feedback.get_feedback_stats()
+        ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+    except Exception as e:
+        logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
+        ranked = scoring.rank_findings(fused)
 
     for f in ranked:
         await feedback.cache_finding(f)
+
 
     elapsed_ms = (time.time() - t0) * 1000.0
 

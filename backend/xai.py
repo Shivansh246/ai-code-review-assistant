@@ -168,14 +168,22 @@ def compute_score_explanation(finding: Finding) -> Tuple[float, Dict[str, float]
     fb_status = getattr(finding, "feedback_status", None)
     fb_factor = 0.1 if fb_status == FeedbackStatus.rejected else 1.0
 
-    raw_score = sev_w * src_w * conf * 100.0 * fb_factor
-    risk_score = round(raw_score, 2)
+    base_raw_score = sev_w * src_w * conf * 100.0 * fb_factor
+
+    fid = getattr(finding, "id", None)
+    if fid and fid in scoring.finding_risk_scores:
+        risk_score = round(scoring.finding_risk_scores[fid], 2)
+    else:
+        risk_score = round(base_raw_score, 2)
+
+    adaptive_multiplier = round(risk_score / base_raw_score, 2) if base_raw_score > 0 else 1.0
 
     factors = {
         "severity_weight": sev_w,
         "source_weight": src_w,
         "confidence": conf,
         "feedback_factor": fb_factor,
+        "adaptive_multiplier": adaptive_multiplier,
         "risk_score": risk_score
     }
 
@@ -184,10 +192,13 @@ def compute_score_explanation(finding: Finding) -> Tuple[float, Dict[str, float]
         f"(Severity weight: {sev_w} [{finding.severity.value}], "
         f"Source weight: {src_w} [{finding.source.value}], "
         f"Confidence: {conf:.2f}"
-        + (f", Feedback penalty: {fb_factor}" if fb_factor < 1.0 else "") + ")"
+        + (f", Feedback penalty: {fb_factor}" if fb_factor < 1.0 else "")
+        + (f", Adaptive multiplier: {adaptive_multiplier}" if adaptive_multiplier != 1.0 else "")
+        + ")"
     )
 
     return risk_score, factors, explanation_str
+
 
 
 # ── Remediation Rationale ──────────────────────────────────────────────────────
