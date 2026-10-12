@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
+import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -27,6 +29,7 @@ from models import (
     ExplainRequest,
     ExplainResponse,
     FeedbackEvent,
+    FeedbackStatus,
     FindingSource,
     FixRequest,
     FixResponse,
@@ -58,6 +61,12 @@ logger = logging.getLogger("ai-review")
 # Adaptive prioritizer (RL experiment)
 prioritizer = AdaptivePrioritizer(epsilon=0.1)
 RL_WEIGHTS_PATH = ".tmp/rl_weights.json"
+rl_lock = asyncio.Lock()
+
+
+def is_rl_enabled() -> bool:
+    """Returns True only when USE_RL_PRIORITIZATION environment variable is set to 1."""
+    return os.getenv("USE_RL_PRIORITIZATION", "0").strip().lower() in ("1", "true", "yes")
 
 
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
@@ -68,22 +77,29 @@ async def lifespan(app: FastAPI):
     logger.info("Initialising database …")
     await feedback.init_db()
 
-    # Load RL weights if they exist
-    try:
-        prioritizer.load(RL_WEIGHTS_PATH)
-        logger.info("RL weights loaded from %s", RL_WEIGHTS_PATH)
-    except FileNotFoundError:
-        logger.info("No existing RL weights — starting fresh.")
+    # Load RL weights only if RL is enabled
+    if is_rl_enabled():
+        try:
+            prioritizer.load(RL_WEIGHTS_PATH)
+            logger.info("RL weights loaded from %s", RL_WEIGHTS_PATH)
+        except Exception as e:
+            logger.warning("Could not load RL weights (starting fresh): %s", e)
+    else:
+        logger.info("RL prioritization disabled by default (USE_RL_PRIORITIZATION=0).")
 
     logger.info("✅ Backend ready.")
     yield
 
-    # Save RL weights on shutdown
-    try:
-        prioritizer.save(RL_WEIGHTS_PATH)
-        logger.info("RL weights saved to %s", RL_WEIGHTS_PATH)
-    except Exception as e:
-        logger.warning("Failed to save RL weights: %s", e)
+    # Save RL weights on shutdown only if RL is enabled and model was trained
+    if is_rl_enabled():
+        try:
+            if prioritizer.update_count > 0:
+                prioritizer.save(RL_WEIGHTS_PATH)
+                logger.info("RL weights saved to %s", RL_WEIGHTS_PATH)
+            else:
+                logger.info("RL weights not modified; skipping save on shutdown.")
+        except Exception as e:
+            logger.warning("Failed to save RL weights: %s", e)
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -165,30 +181,44 @@ async def review_file(req: ReviewRequest):
     ):
         sources_used.append(FindingSource.fused)
 
-    # Apply RL priority adjustments (experimental)
-    try:
-        for f in fused:
-            prioritizer.get_priority_adjustment(f)
-    except Exception as e:
-        logger.warning("RL priority adjustment skipped: %s", e)
+    request_id = str(uuid.uuid4())
+    applied_actions: dict[str, float] = {}
 
-    # Score and rank with historical feedback adaptation
-    try:
-        fb_stats = await feedback.get_feedback_stats()
-        ranked = scoring.rank_findings_adaptive(fused, fb_stats)
-    except Exception as e:
-        logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
-        ranked = scoring.rank_findings(fused)
+    if is_rl_enabled():
+        try:
+            ranked, applied_actions = scoring.rank_findings_rl(fused, prioritizer, review_id=request_id)
+            logger.info("Applied opt-in RL prioritization to %d findings", len(ranked))
+        except Exception as e:
+            logger.warning("RL prioritization failed, falling back to Phase 6A adaptive scoring: %s", e)
+            applied_actions.clear()
+            try:
+                fb_stats = await feedback.get_feedback_stats()
+                ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+            except Exception as fb_err:
+                logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", fb_err)
+                ranked = scoring.rank_findings(fused)
+    else:
+        # Phase 6A deterministic adaptive baseline (default)
+        try:
+            fb_stats = await feedback.get_feedback_stats()
+            ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+        except Exception as e:
+            logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
+            ranked = scoring.rank_findings(fused)
 
-    # Cache findings for later lookup (explain, fix)
+    # Cache findings for later lookup (explain, fix) and persist applied RL action if enabled
     for f in ranked:
+        f.review_id = request_id
         await feedback.cache_finding(f)
+        if is_rl_enabled() and f.id in applied_actions:
+            await feedback.record_rl_action(f.id, applied_actions[f.id], review_id=request_id)
 
     elapsed_ms = (time.time() - t0) * 1000.0
 
     logger.info("  Total: %d findings in %.0f ms", len(ranked), elapsed_ms)
 
     return ReviewResponse(
+        request_id=request_id,
         file_path=req.file_path,
         findings=ranked,
         scan_duration_ms=round(elapsed_ms, 1),
@@ -232,20 +262,40 @@ async def review_repo(req: RepoReviewRequest):
         logger.warning("OSV repo scan failed: %s", osv_findings)
 
     fused = await fusion.fuse_findings(all_findings)
-    try:
-        fb_stats = await feedback.get_feedback_stats()
-        ranked = scoring.rank_findings_adaptive(fused, fb_stats)
-    except Exception as e:
-        logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
-        ranked = scoring.rank_findings(fused)
+    request_id = str(uuid.uuid4())
+    applied_actions: dict[str, float] = {}
+
+    if is_rl_enabled():
+        try:
+            ranked, applied_actions = scoring.rank_findings_rl(fused, prioritizer, review_id=request_id)
+            logger.info("Applied opt-in RL prioritization to %d repo findings", len(ranked))
+        except Exception as e:
+            logger.warning("RL prioritization failed, falling back to Phase 6A adaptive scoring: %s", e)
+            applied_actions.clear()
+            try:
+                fb_stats = await feedback.get_feedback_stats()
+                ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+            except Exception as fb_err:
+                logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", fb_err)
+                ranked = scoring.rank_findings(fused)
+    else:
+        try:
+            fb_stats = await feedback.get_feedback_stats()
+            ranked = scoring.rank_findings_adaptive(fused, fb_stats)
+        except Exception as e:
+            logger.warning("Failed to retrieve feedback stats, falling back to static scoring: %s", e)
+            ranked = scoring.rank_findings(fused)
 
     for f in ranked:
+        f.review_id = request_id
         await feedback.cache_finding(f)
-
+        if is_rl_enabled() and f.id in applied_actions:
+            await feedback.record_rl_action(f.id, applied_actions[f.id], review_id=request_id)
 
     elapsed_ms = (time.time() - t0) * 1000.0
 
     return ReviewResponse(
+        request_id=request_id,
         file_path=req.repo_path,
         findings=ranked,
         scan_duration_ms=round(elapsed_ms, 1),
@@ -314,14 +364,40 @@ async def submit_feedback(event: FeedbackEvent):
         event.status,
     )
 
-    # Persist feedback
+    # 1. Always persist feedback (Phase 6A baseline)
     await feedback.store_feedback(event)
 
-    # Update RL model
-    finding = await feedback.get_cached_finding(event.finding_id)
-    if finding:
-        reward = 1.0 if event.status == "accepted" else -1.0
-        prioritizer.update(finding, reward)
+    # 2. Update RL model only when opt-in enabled
+    if is_rl_enabled():
+        try:
+            async with rl_lock:
+                # The server's SQLite record is authoritative
+                persisted_action = await feedback.get_and_consume_rl_action(event.finding_id, event.review_id)
+                if persisted_action is not None:
+                    if event.applied_action is not None and event.applied_action != persisted_action:
+                        logger.warning(
+                            "Client-supplied action %.2f differs from authoritative server action %.2f for finding %s; using server action",
+                            event.applied_action,
+                            persisted_action,
+                            event.finding_id,
+                        )
+                    action = persisted_action
+                    cached_finding = await feedback.get_cached_finding(event.finding_id)
+                    if cached_finding:
+                        reward = 1.0 if (event.status == FeedbackStatus.accepted or event.status == "accepted") else -1.0
+                        prioritizer.update(cached_finding, reward, action=action)
+                        logger.info(
+                            "Updated RL policy for finding %s: action=%.2f, reward=%.1f",
+                            event.finding_id,
+                            action,
+                            reward,
+                        )
+                    else:
+                        logger.warning("Finding %s not found in cache for RL update", event.finding_id)
+                else:
+                    logger.info("No unconsumed RL action found for finding %s; skipping RL update", event.finding_id)
+        except Exception as e:
+            logger.warning("RL feedback update failed gracefully: %s", e)
 
     return {"status": "recorded", "finding_id": event.finding_id}
 

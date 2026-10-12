@@ -31,6 +31,16 @@ async def init_db() -> None:
                     created_at TEXT DEFAULT (datetime('now'))
                 )
             """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS rl_actions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    finding_id TEXT NOT NULL,
+                    action REAL NOT NULL,
+                    review_id TEXT,
+                    consumed INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
             await db.commit()
             logger.info(f"Initialized feedback database at {DB_PATH}")
     except Exception as e:
@@ -115,6 +125,45 @@ async def get_cached_finding(finding_id: str) -> Optional[Finding]:
     except Exception as e:
         logger.error(f"Failed to retrieve cached finding {finding_id}: {e}")
     return None
+
+async def record_rl_action(finding_id: str, action: float, review_id: Optional[str] = None) -> None:
+    """Persist an applied RL action for a finding in a review instance."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO rl_actions (finding_id, action, review_id, consumed) VALUES (?, ?, ?, 0)",
+                (finding_id, float(action), review_id)
+            )
+            await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to record RL action for {finding_id}: {e}")
+
+async def get_and_consume_rl_action(finding_id: str, review_id: Optional[str] = None) -> Optional[float]:
+    """
+    Atomically retrieves and marks as consumed the earliest unconsumed RL action
+    for a finding (or matching review_id if provided).
+    Returns None if no matching unconsumed action exists.
+    """
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            if review_id:
+                query = "SELECT id, action FROM rl_actions WHERE finding_id = ? AND review_id = ? AND consumed = 0 ORDER BY id ASC LIMIT 1"
+                params = (finding_id, review_id)
+            else:
+                query = "SELECT id, action FROM rl_actions WHERE finding_id = ? AND consumed = 0 ORDER BY id ASC LIMIT 1"
+                params = (finding_id,)
+            async with db.execute(query, params) as cursor:
+                row = await cursor.fetchone()
+                if not row:
+                    return None
+                action_id, action_val = row[0], row[1]
+
+            await db.execute("UPDATE rl_actions SET consumed = 1 WHERE id = ?", (action_id,))
+            await db.commit()
+            return float(action_val)
+    except Exception as e:
+        logger.error(f"Failed to retrieve/consume RL action for {finding_id}: {e}")
+        return None
 
 async def get_rejection_rate() -> float:
     """Calculate the percentage of findings that have been rejected."""

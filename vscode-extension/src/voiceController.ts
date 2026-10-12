@@ -835,22 +835,32 @@ export class VoiceController {
   }
 
   /** Accept a finding by voice or button */
-  async acceptFinding(findingId: string): Promise<void> {
+  async acceptFinding(findingId: string, reviewId?: string): Promise<void> {
+    const resolvedReviewId =
+      reviewId ??
+      this.findingsProvider?.getFindings?.().find((f) => f.id === findingId)?.review_id;
+
     await this.api.sendFeedback({
       finding_id: findingId,
       status: 'accepted',
       timestamp: new Date().toISOString(),
+      review_id: resolvedReviewId,
     });
     this.speak('Finding accepted. The model will prioritise similar findings.');
     vscode.window.showInformationMessage(`✅ Finding accepted: ${findingId}`);
   }
 
   /** Reject a finding by voice or button */
-  async rejectFinding(findingId: string): Promise<void> {
+  async rejectFinding(findingId: string, reviewId?: string): Promise<void> {
+    const resolvedReviewId =
+      reviewId ??
+      this.findingsProvider?.getFindings?.().find((f) => f.id === findingId)?.review_id;
+
     await this.api.sendFeedback({
       finding_id: findingId,
       status: 'rejected',
       timestamp: new Date().toISOString(),
+      review_id: resolvedReviewId,
     });
     this.speak('Finding rejected. False positive recorded.');
     vscode.window.showInformationMessage(`❌ Finding rejected: ${findingId}`);

@@ -171,7 +171,9 @@ def compute_score_explanation(finding: Finding) -> Tuple[float, Dict[str, float]
     base_raw_score = sev_w * src_w * conf * 100.0 * fb_factor
 
     fid = getattr(finding, "id", None)
-    if fid and fid in scoring.finding_risk_scores:
+    if getattr(finding, "risk_score", None) is not None:
+        risk_score = round(float(finding.risk_score), 2)
+    elif fid and fid in scoring.finding_risk_scores:
         risk_score = round(scoring.finding_risk_scores[fid], 2)
     else:
         risk_score = round(base_raw_score, 2)

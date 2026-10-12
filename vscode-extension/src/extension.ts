@@ -321,7 +321,7 @@ export function activate(context: vscode.ExtensionContext): void {
           vscode.window.showWarningMessage('No finding selected.');
           return;
         }
-        await voiceController.acceptFinding(finding.id);
+        await voiceController.acceptFinding(finding.id, finding.review_id);
         findingsProvider.updateFeedback(finding.id, 'accepted');
       }
     )
@@ -339,7 +339,7 @@ export function activate(context: vscode.ExtensionContext): void {
           vscode.window.showWarningMessage('No finding selected.');
           return;
         }
-        await voiceController.rejectFinding(finding.id);
+        await voiceController.rejectFinding(finding.id, finding.review_id);
         findingsProvider.updateFeedback(finding.id, 'rejected');
       }
     )

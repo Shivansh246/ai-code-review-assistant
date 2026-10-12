@@ -35,6 +35,7 @@ export interface Finding {
   score_factors?: Record<string, number>;
   evidence_snippet?: string;
   remediation_rationale?: string;
+  review_id?: string;
 }
 
 /** Token-level attribution from XAI (Captum) */
@@ -51,6 +52,8 @@ export interface FeedbackEvent {
   status: FeedbackStatus;
   timestamp: string;            // ISO 8601
   comment?: string;
+  review_id?: string;
+  applied_action?: number;
 }
 
 /** Response from POST /review */

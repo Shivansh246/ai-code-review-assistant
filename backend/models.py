@@ -80,6 +80,8 @@ class Finding(BaseModel):
     fix_suggestion: Optional[str] = None
     token_attributions: Optional[list[TokenAttribution]] = None
     feedback_status: Optional[FeedbackStatus] = None
+    risk_score: Optional[float] = None
+    review_id: Optional[str] = None
 
 
 # ── Request / Response: /review ───────────────────────────────────────────────
@@ -140,6 +142,8 @@ class FeedbackEvent(BaseModel):
     status: FeedbackStatus
     timestamp: str                              # ISO 8601
     comment: Optional[str] = None
+    review_id: Optional[str] = None
+    applied_action: Optional[float] = None
 
 
 # ── Voice ─────────────────────────────────────────────────────────────────────
