@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "total_samples": 300,
+    "train_samples": 240,
+    "test_samples": 60,
+    "classes": [
+      "explain",
+      "generate_fix",
+      "review"
+    ],
+    "seed": 42,
+    "note": "Transcript text features vs transcript + code context feature fusion (not acoustic waveforms)"
+  },
+  "baseline_transcript_only": {
+    "accuracy": 0.5166666666666667,
+    "precision_macro": 0.5166666666666667,
+    "recall_macro": 0.5166666666666667,
+    "f1_macro": 0.5166666666666667,
+    "precision_weighted": 0.5166666666666667,
+    "recall_weighted": 0.5166666666666667,
+    "f1_weighted": 0.5166666666666667,
+    "labels": [
+      "explain",
+      "generate_fix",
+      "review"
+    ],
+    "per_class": {
+      "explain": {
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5
+      },
+      "generate_fix": {
+        "precision": 0.55,
+        "recall": 0.55,
+        "f1": 0.55
+      },
+      "review": {
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5
+      }
+    },
+    "confusion_matrix": [
+      [
+        10,
+        4,
+        6
+      ],
+      [
+        5,
+        11,
+        4
+      ],
+      [
+        5,
+        5,
+        10
+      ]
+    ]
+  },
+  "approach_transcript_code_fusion": {
+    "accuracy": 1.0,
+    "precision_macro": 1.0,
+    "recall_macro": 1.0,
+    "f1_macro": 1.0,
+    "precision_weighted": 1.0,
+    "recall_weighted": 1.0,
+    "f1_weighted": 1.0,
+    "labels": [
+      "explain",
+      "generate_fix",
+      "review"
+    ],
+    "per_class": {
+      "explain": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "generate_fix": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "review": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        20,
+        0,
+        0
+      ],
+      [
+        0,
+        20,
+        0
+      ],
+      [
+        0,
+        0,
+        20
+      ]
+    ]
+  },
+  "dataset_info": {
+    "total_samples": 300,
+    "label_distribution": {
+      "generate_fix": 100,
+      "explain": 100,
+      "review": 100
+    },
+    "is_synthetic": true,
+    "note": "audio field contains text transcripts (voice command text), not acoustic waveforms. Dataset is synthetically generated via generate_dataset.py with seed=42.",
+    "split": "80/20 stratified train/test",
+    "test_size": 60,
+    "train_size": 240
+  }
+}

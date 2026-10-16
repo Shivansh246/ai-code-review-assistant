@@ -1,0 +1,20 @@
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run AI Code Review Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/vscode-extension/out/**/*.js"
+      ],
+      "preLaunchTask": "Compile VS Code Extension"
+    }
+  ]
+}

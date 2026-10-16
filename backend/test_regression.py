@@ -14,7 +14,7 @@ import time
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from models import Finding, FindingSource, Severity
+from models import Finding, FindingSource, ReviewRequest, Severity
 import fusion
 import scanner_llm
 import scanner_osv
@@ -913,6 +913,172 @@ class TestXAIRegression(unittest.TestCase):
             self.assertIsInstance(attrs, list)
             self.assertIsInstance(highlighted, list)
         asyncio.run(run_test())
+
+
+class TestReviewRequestSchemaCompatibility(unittest.TestCase):
+    """
+    Regression tests for ReviewRequest API contract hardening:
+    - Canonical requests using 'content'
+    - Legacy requests using 'code'
+    - Requests supplying both 'content' and 'code' with matching values
+    - Requests supplying conflicting 'content' and 'code' values
+    - Missing or empty source code handling
+    """
+
+    def test_canonical_content_request(self):
+        req = ReviewRequest(file_path="app.py", content="import os\nos.system('ls')")
+        self.assertEqual(req.file_path, "app.py")
+        self.assertEqual(req.content, "import os\nos.system('ls')")
+
+    def test_legacy_code_alias_request(self):
+        req = ReviewRequest(file_path="app.py", code="import os\nos.system('ls')")
+        self.assertEqual(req.file_path, "app.py")
+        self.assertEqual(req.content, "import os\nos.system('ls')")
+
+    def test_both_content_and_code_identical(self):
+        code_str = "import os\nos.system('ls')"
+        req = ReviewRequest(file_path="app.py", content=code_str, code=code_str)
+        self.assertEqual(req.content, code_str)
+
+    def test_conflicting_content_and_code_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            ReviewRequest(file_path="app.py", content="code_a", code="code_b")
+        self.assertIn("Conflicting values provided for 'content' and 'code' alias", str(ctx.exception))
+
+    def test_missing_content_and_code_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            ReviewRequest(file_path="app.py")
+        self.assertIn("Either 'content' or 'code' must be provided", str(ctx.exception))
+
+    def test_empty_or_whitespace_content_rejected(self):
+        with self.assertRaises(ValueError) as ctx:
+            ReviewRequest(file_path="empty.py", content="")
+        self.assertIn("Source code content must be non-empty", str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            ReviewRequest(file_path="empty.py", code="   \n\t  ")
+        self.assertIn("Source code content must be non-empty", str(ctx.exception))
+
+
+class TestLocalVoskTranscribe(unittest.TestCase):
+    """
+    Tests for local offline speech recognition via Vosk and the /voice/transcribe endpoint:
+    - Missing Vosk model triggers HTTP 503 with actionable setup guidance
+    - Missing Vosk library triggers HTTP 500
+    - Empty audio upload triggers HTTP 400
+    - Oversized audio upload (>10MB) triggers HTTP 413
+    - Unsupported audio format triggers HTTP 400
+    - Mocked KaldiRecognizer transcription returns valid transcript
+    - WAV audio normalization logic and audio processing
+    """
+
+    def setUp(self):
+        import vosk_service
+        vosk_service.clear_vosk_model_cache()
+
+    def _create_dummy_wav(self, duration_sec: float = 0.5, rate: int = 16000, channels: int = 1) -> bytes:
+        import io
+        import wave
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(channels)
+            wf.setsampwidth(2)
+            wf.setframerate(rate)
+            num_frames = int(duration_sec * rate)
+            wf.writeframes(b"\x00\x00" * num_frames * channels)
+        return buf.getvalue()
+
+    def test_missing_vosk_model_raises_http_503(self):
+        from starlette.testclient import TestClient
+        from main import app
+        import vosk_service
+
+        client = TestClient(app)
+        wav_bytes = self._create_dummy_wav()
+
+        with patch.object(vosk_service, "is_model_available", return_value=False):
+            resp = client.post(
+                "/voice/transcribe",
+                files={"file": ("test.wav", wav_bytes, "audio/wav")}
+            )
+            self.assertEqual(resp.status_code, 503)
+            self.assertIn("Vosk model directory not found", resp.json()["detail"])
+            self.assertIn("download_vosk_model.py", resp.json()["detail"])
+
+    def test_empty_audio_file_rejected_http_400(self):
+        from starlette.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        resp = client.post(
+            "/voice/transcribe",
+            files={"file": ("empty.wav", b"", "audio/wav")}
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("empty", resp.json()["detail"].lower())
+
+    def test_oversized_audio_file_rejected_http_413(self):
+        from starlette.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        oversized_data = b"0" * (10 * 1024 * 1024 + 1)
+        resp = client.post(
+            "/voice/transcribe",
+            files={"file": ("large.wav", oversized_data, "audio/wav")}
+        )
+        self.assertEqual(resp.status_code, 413)
+        self.assertIn("exceeds maximum size limit", resp.json()["detail"])
+
+    def test_unsupported_audio_format_rejected_http_400(self):
+        from starlette.testclient import TestClient
+        from main import app
+
+        client = TestClient(app)
+        resp = client.post(
+            "/voice/transcribe",
+            files={"file": ("malicious.exe", b"MZ...", "application/octet-stream")}
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Unsupported audio format", resp.json()["detail"])
+
+    def test_successful_transcription_with_mocked_vosk(self):
+        from starlette.testclient import TestClient
+        from main import app
+        import vosk_service
+
+        client = TestClient(app)
+        wav_bytes = self._create_dummy_wav()
+
+        mock_recognizer = MagicMock()
+        mock_recognizer.AcceptWaveform.return_value = True
+        mock_recognizer.FinalResult.return_value = json.dumps({"text": "review this file"})
+
+        mock_vosk = MagicMock()
+        mock_vosk.Model.return_value = MagicMock()
+        mock_vosk.KaldiRecognizer.return_value = mock_recognizer
+        mock_vosk.SetLogLevel = MagicMock()
+
+        with patch.dict("sys.modules", {"vosk": mock_vosk}):
+            with patch.object(vosk_service, "is_model_available", return_value=True):
+                resp = client.post(
+                    "/voice/transcribe",
+                    files={"file": ("voice.wav", wav_bytes, "audio/wav")}
+                )
+                self.assertEqual(resp.status_code, 200)
+                data = resp.json()
+                self.assertEqual(data["transcript"], "review this file")
+
+    def test_audio_normalization_preserves_16khz_mono(self):
+        import vosk_service
+        wav_bytes = self._create_dummy_wav(rate=16000, channels=1)
+        normalized = vosk_service.normalize_audio_to_pcm16_wav(wav_bytes, "input.wav")
+        self.assertEqual(normalized, wav_bytes)
+
+    def test_audio_normalization_empty_bytes_raises_error(self):
+        import vosk_service
+        with self.assertRaises(ValueError):
+            vosk_service.normalize_audio_to_pcm16_wav(b"", "empty.wav")
 
 
 if __name__ == "__main__":

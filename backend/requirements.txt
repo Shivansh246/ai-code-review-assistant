@@ -14,3 +14,7 @@ openai>=1.30.0
 
 # ── Database ──────────────────────────────────────────────────
 aiosqlite>=0.19.0
+
+# ── Voice / Speech Recognition (Local Offline) ─────────────────
+vosk>=0.3.45
+python-multipart>=0.0.9

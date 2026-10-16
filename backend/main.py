@@ -22,7 +22,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
@@ -46,7 +46,9 @@ import scanner_semgrep
 import scanner_llm
 import scanner_osv
 import xai
+import vosk_service
 from rl_experiment import AdaptivePrioritizer
+
 
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -414,6 +416,73 @@ async def process_voice_command(cmd: VoiceCommand):
         cmd.transcript[:80],
     )
     return {"status": "ok", "command": cmd.command}
+
+
+@app.post("/voice/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    """
+    Upload recorded audio file for speech-to-text transcription using local, offline Vosk.
+    Zero cloud API calls, zero cost, completely local execution.
+    Input constraints:
+    - Maximum audio file size: 10MB
+    - Content-Type / extension: wav, mp3, ogg, webm, flac, m4a
+    """
+    MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
+    ALLOWED_EXTENSIONS = {".wav", ".mp3", ".ogg", ".webm", ".flac", ".m4a"}
+
+    filename = file.filename or "audio.wav"
+    _, ext = os.path.splitext(filename.lower())
+    if ext not in ALLOWED_EXTENSIONS and not (file.content_type and "audio" in file.content_type):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported audio format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+
+    # Read uploaded content and validate size
+    content = await file.read()
+    if not content or len(content) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded audio file is empty.")
+    if len(content) > MAX_AUDIO_SIZE:
+        raise HTTPException(status_code=413, detail="Audio file exceeds maximum size limit (10MB).")
+
+    # Local Vosk Speech-to-Text Transcription
+    try:
+        # Run blocking Kaldi recognition in default threadpool to keep async event loop responsive
+        loop = asyncio.get_running_loop()
+        transcript = await loop.run_in_executor(
+            None,
+            vosk_service.transcribe_audio_bytes,
+            content,
+            filename,
+        )
+        logger.info("Local Vosk recognized transcript: '%s'", transcript[:60])
+        return {"transcript": transcript}
+    except FileNotFoundError as e:
+        logger.error("Vosk model missing: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail=str(e),
+        )
+    except RuntimeError as e:
+        logger.error("Vosk runtime error: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
+    except ValueError as e:
+        logger.warning("Vosk audio decode error: %s", e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid audio format: {e}",
+        )
+    except Exception as e:
+        logger.error("Unexpected error in local Vosk transcription: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal local speech recognition error: {e}",
+        )
+
+
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

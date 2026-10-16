@@ -1,0 +1,197 @@
+{
+  "evaluation": {
+    "candidate_counts": {
+      "total": 5,
+      "tp": 3,
+      "fp": 2,
+      "total_gt": 3
+    },
+    "static_metrics": {
+      "tp": 2,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.6667,
+      "recall": 0.6667,
+      "f1": 0.6667,
+      "candidate_ranking_precision": 0.6667,
+      "candidate_ranking_recall": 0.6667,
+      "candidate_ranking_f1": 0.6667,
+      "end_to_end_detection_recall": null,
+      "end_to_end_detection_recall_status": "UNAVAILABLE (offline candidate fixture)"
+    },
+    "adaptive_metrics": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "candidate_ranking_precision": 1.0,
+      "candidate_ranking_recall": 1.0,
+      "candidate_ranking_f1": 1.0,
+      "end_to_end_detection_recall": null,
+      "end_to_end_detection_recall_status": "UNAVAILABLE (offline candidate fixture)"
+    },
+    "rl_cold_metrics": {
+      "tp": 2,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.6667,
+      "recall": 0.6667,
+      "f1": 0.6667,
+      "candidate_ranking_precision": 0.6667,
+      "candidate_ranking_recall": 0.6667,
+      "candidate_ranking_f1": 0.6667,
+      "end_to_end_detection_recall": null,
+      "end_to_end_detection_recall_status": "UNAVAILABLE (offline candidate fixture)"
+    },
+    "rl_trained_metrics": {
+      "tp": 2,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.6667,
+      "recall": 0.6667,
+      "f1": 0.6667,
+      "candidate_ranking_precision": 0.6667,
+      "candidate_ranking_recall": 0.6667,
+      "candidate_ranking_f1": 0.6667,
+      "end_to_end_detection_recall": null,
+      "end_to_end_detection_recall_status": "UNAVAILABLE (offline candidate fixture)"
+    },
+    "adaptive_demotion": {
+      "score_rate": 100.0,
+      "rank_rate": 100.0
+    },
+    "rl_cold_demotion": {
+      "score_rate": 0.0,
+      "rank_rate": 0.0
+    },
+    "rl_trained_demotion": {
+      "score_rate": 100.0,
+      "rank_rate": 0.0
+    },
+    "static_order": [
+      [
+        "f1-cmd-tp",
+        "Command Injection",
+        85.5
+      ],
+      [
+        "f2-sqli-fp",
+        "False Positive SQL Warning",
+        81.0
+      ],
+      [
+        "f3-creds-tp",
+        "Hardcoded Credentials",
+        64.8
+      ],
+      [
+        "f4-path-tp",
+        "Path Traversal",
+        61.2
+      ],
+      [
+        "f5-style-fp",
+        "Noisy Code Smell Warning",
+        36.0
+      ]
+    ],
+    "adaptive_order": [
+      [
+        "f1-cmd-tp",
+        "Command Injection",
+        85.5
+      ],
+      [
+        "f4-path-tp",
+        "Path Traversal",
+        67.32
+      ],
+      [
+        "f3-creds-tp",
+        "Hardcoded Credentials",
+        64.8
+      ],
+      [
+        "f5-style-fp",
+        "Noisy Code Smell Warning",
+        36.0
+      ],
+      [
+        "f2-sqli-fp",
+        "False Positive SQL Warning",
+        32.4
+      ]
+    ],
+    "rl_cold_order": [
+      [
+        "f1-cmd-tp",
+        "Command Injection",
+        85.5
+      ],
+      [
+        "f2-sqli-fp",
+        "False Positive SQL Warning",
+        81.0
+      ],
+      [
+        "f3-creds-tp",
+        "Hardcoded Credentials",
+        64.8
+      ],
+      [
+        "f4-path-tp",
+        "Path Traversal",
+        61.2
+      ],
+      [
+        "f5-style-fp",
+        "Noisy Code Smell Warning",
+        36.0
+      ]
+    ],
+    "rl_trained_order": [
+      [
+        "f1-cmd-tp",
+        "Command Injection",
+        51.3
+      ],
+      [
+        "f2-sqli-fp",
+        "False Positive SQL Warning",
+        48.6
+      ],
+      [
+        "f3-creds-tp",
+        "Hardcoded Credentials",
+        38.88
+      ],
+      [
+        "f4-path-tp",
+        "Path Traversal",
+        36.72
+      ],
+      [
+        "f5-style-fp",
+        "Noisy Code Smell Warning",
+        21.6
+      ]
+    ],
+    "rl_cold_actions": {
+      "f1-cmd-tp": 1.0,
+      "f2-sqli-fp": 1.0,
+      "f3-creds-tp": 1.0,
+      "f4-path-tp": 1.0,
+      "f5-style-fp": 1.0
+    },
+    "rl_trained_actions": {
+      "f1-cmd-tp": 0.6,
+      "f2-sqli-fp": 0.6,
+      "f3-creds-tp": 0.6,
+      "f4-path-tp": 0.6,
+      "f5-style-fp": 0.6
+    }
+  },
+  "execution_time_s": 0.136
+}

@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-10-16T15:29:36+05:30",
+  "environment": {
+    "os": "Arch Linux",
+    "kernel": "6.18.48-1-lts",
+    "python": "3.14.7",
+    "node": "26.8.1",
+    "npm": "12.0.2",
+    "semgrep": "via backend/.venv/bin/semgrep (system semgrep not on PATH)"
+  },
+  "git_diff_check": "CLEAN (no whitespace errors)",
+  "backend_tests": {
+    "command": "PYTHONPATH=backend ./backend/.venv/bin/python -m unittest discover -s backend -v",
+    "total": 102,
+    "passed": 102,
+    "failed": 0,
+    "skipped": 0,
+    "duration_s": 0.451,
+    "result": "OK"
+  },
+  "extension_compilation": {
+    "command": "cd vscode-extension && npm run compile",
+    "exit_code": 0,
+    "typescript_errors": 0,
+    "result": "OK"
+  },
+  "voice_tests": {
+    "command": "cd vscode-extension && node ./out/test/runVoiceTests.js",
+    "total": 107,
+    "passed": 107,
+    "failed": 0,
+    "result": "OK",
+    "note": "All tests mocked (no physical microphone in CI). Real microphone tests separated."
+  }
+}

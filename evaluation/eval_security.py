@@ -58,7 +58,13 @@ async def run_evaluation(backend_url: str):
         f_start = finding.get("line_start", -1)
         f_end = finding.get("line_end", f_start)
         
-        source = finding.get("source", {}).get("name", "unknown")
+        raw_source = finding.get("source")
+        if isinstance(raw_source, dict):
+            source = raw_source.get("name", "unknown")
+        elif isinstance(raw_source, str):
+            source = raw_source
+        else:
+            source = "unknown"
         if source in source_stats:
             source_stats[source] += 1
             

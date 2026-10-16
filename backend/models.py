@@ -13,7 +13,7 @@ import uuid
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
@@ -88,7 +88,27 @@ class Finding(BaseModel):
 
 class ReviewRequest(BaseModel):
     file_path: str
-    content: str
+    content: Optional[str] = None
+    code: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_content_and_code(cls, data):
+        if not isinstance(data, dict):
+            return data
+        content = data.get("content")
+        code = data.get("code")
+        if content is not None and code is not None:
+            if content != code:
+                raise ValueError("Conflicting values provided for 'content' and 'code' alias")
+        elif content is None and code is not None:
+            data["content"] = code
+        raw_content = data.get("content")
+        if raw_content is None:
+            raise ValueError("Either 'content' or 'code' must be provided")
+        if not str(raw_content).strip():
+            raise ValueError("Source code content must be non-empty")
+        return data
 
 
 class RepoReviewRequest(BaseModel):

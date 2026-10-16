@@ -46,3 +46,8 @@ htmlcov/
 
 # IDE
 .idea/
+
+# Local Voice Models & Audio
+models/vosk-*
+.models/
+*.wav

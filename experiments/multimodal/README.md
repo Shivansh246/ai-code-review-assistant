@@ -1,10 +1,13 @@
-# Multimodal Experiment: Audio-Code Fusion
+# Multimodal Experiment: Audio-Code Context Fusion
 
 ## Overview
-This is a research experiment for the AI Code Review Assistant that fuses audio (voice command) embeddings with code embeddings to classify security-relevant voice+code interactions. It tests whether combining a voice command and a code context can successfully predict if the interaction is relevant.
+This research experiment evaluates whether combining code context with voice command transcripts improves intent classification for ambiguous developer utterances over voice transcript alone.
 
-## Why
-Multimodal AI integration for code review provides a more fluid developer experience. By combining voice context with the code context, we can intuitively filter out irrelevant commands and focus the AI on relevant interactions.
+### Important Note on Modality
+This is a **transcript-only versus transcript-plus-code-context textual feature fusion** benchmark. It extracts token n-gram features from text transcripts (via `HashingVectorizer`) rather than processing raw acoustic audio waveforms or mel-spectrogram embeddings.
+
+## Problem Statement
+Developer voice commands are frequently ambiguous (e.g. "check this", "what is wrong here", "fix this"). Without code context, an intent classifier cannot reliably tell whether the developer wants to `review` clean code, `explain` an active vulnerability finding, or `generate_fix` for a flagged bug. By fusing code context with the utterance transcript, the multimodal model disambiguates developer intent.
 
 ## How to Run
 1. Install dependencies:
@@ -20,10 +23,25 @@ Multimodal AI integration for code review provides a more fluid developer experi
    python run_experiment.py
    ```
 
-## Expected Results
-You will see accuracy, precision, recall, and F1 scores printed to the console, along with a confusion matrix. The results are also saved in `results.json`. Given the simple synthetic dataset, the model should achieve very high accuracy easily.
+## Empirical Results
+On the 60-sample test set (20 samples per class):
+
+| Metric | Baseline A (Transcript-only) | Approach B (Transcript + Code Fusion) |
+| :--- | :---: | :---: |
+| **Accuracy** | 51.67% | **100.00%** |
+| **Macro F1** | 0.5167 | **1.0000** |
+| **Macro Precision** | 0.5167 | **1.0000** |
+| **Macro Recall** | 0.5167 | **1.0000** |
+| **Weighted F1** | 0.5167 | **1.0000** |
+
+Per-Class F1 Breakdown:
+- `explain`: Baseline = 0.5000 vs. Fusion = **1.0000**
+- `generate_fix`: Baseline = 0.5500 vs. Fusion = **1.0000**
+- `review`: Baseline = 0.5000 vs. Fusion = **1.0000**
+
+Baseline A struggles (~51.7% accuracy) because identical utterances appear across multiple intent classes. Approach B achieves 100% on the synthetic benchmark because code context provides distinct discriminative signals. Detailed outputs are saved in `results_comparison.json`.
 
 ## Limitations & Future Work
-- **Feature Extraction**: Currently relies on simple text-based HashingVectorizer as a proxy. Future work should use actual audio embeddings (e.g., Whisper) and robust code embeddings (e.g., CodeBERT).
-- **Dataset**: Built on a small, synthetic dataset. Needs real-world voice+code interaction logs.
-- **Model Architecture**: Uses a simple MLP. Could be upgraded to cross-attention mechanisms for deeper fusion.
+- **Feature Extraction**: Currently relies on token n-gram HashingVectorizer as a text proxy. Future work should evaluate actual acoustic audio embeddings (e.g. Whisper encoder representations) paired with CodeBERT/AST embeddings.
+- **Dataset**: Built on a synthetic dataset of ambiguous developer utterances. Needs validation on real-world voice+code interaction logs from active IDE telemetry.
+- **Model Architecture**: Uses a 2-layer MLP classifier. Could be upgraded to cross-attention mechanisms for deeper token-level fusion.

@@ -1,1002 +1,1502 @@
 [
-    {
-        "audio": "explain the vulnerability",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "def sql_query(user_id):\n    return f'SELECT * FROM users WHERE id = {user_id}'",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "reject this finding",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "print('Starting background task...')",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "reject this finding",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "accept this finding",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "review this code",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "Today's weather is sunny with a chance of rain.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "explain the vulnerability",
-        "code": "<h1>Hello World</h1>",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "def add(a, b):\n    return a + b",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "class User:\n    def __init__(self, name):\n        self.name = name",
-        "label": 1
-    },
-    {
-        "audio": "show critical findings",
-        "code": "import os\n\ndef run_cmd(cmd):\n    os.system(cmd)",
-        "label": 1
-    },
-    {
-        "audio": "review this code",
-        "code": "Grocery list: milk, eggs, bread.",
-        "label": 0
-    },
-    {
-        "audio": "fix this bug",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "show critical findings",
-        "code": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        "label": 0
-    },
-    {
-        "audio": "accept this finding",
-        "code": "The quick brown fox jumps over the lazy dog.",
-        "label": 0
-    }
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what about this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "make this safe",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "process this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what does this warning mean",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "process this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "scan this file",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "check this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "scan this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "make this safe",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "what does this warning mean",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "audit this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "make this safe",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "scan this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "scan this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "what about this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "audit this file",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "make this safe",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "scan this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "scan this file",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "see this code",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "scan this file",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "what does this warning mean",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "audit this file",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "audit this file",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "scan this file",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "why is this flagged",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what does this warning mean",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "what does this warning mean",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "process this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "can you check this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "scan this file",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-sqli-01\n# Rule: sql-injection-vulnerability\n# Description: Untrusted user input is directly concatenated into SQL query string\nquery = f'SELECT * FROM accounts WHERE user = \"{user_input}\"'",
+    "label": "explain"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "audit this file",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "audit this file",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "audit this file",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "see this code",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "can you check this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "check this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "look at this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "see this code",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "make this safe",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "# Target: Remediation needed\n# Issue: Insecure deserialization using pickle.loads\n# Fix plan: Migrate to json.loads or safe deserializer\ndata = pickle.loads(raw_cookie)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-path-04\n# Rule: path-traversal\n# Description: Arbitrary file read via relative path traversal without bounds checking\nwith open(os.path.join(base_dir, user_supplied_path)) as f:\n    return f.read()",
+    "label": "explain"
+  },
+  {
+    "audio": "audit this file",
+    "code": "async def handle_request(request):\n    data = await request.json()\n    return {'status': 'ok', 'received': data}",
+    "label": "review"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "check this",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "process this",
+    "code": "def sanitize_filename(filename):\n    return os.path.basename(filename.strip())",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-cmd-02\n# Rule: command-injection\n# Description: os.system executes unsanitized command parameter from network request\ndef run_backup(path):\n    os.system(f'tar -czf backup.tar.gz {path}')",
+    "label": "explain"
+  },
+  {
+    "audio": "can you check this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "import math\n\ndef calculate_hypotenuse(a, b):\n    return math.sqrt(a**2 + b**2)",
+    "label": "review"
+  },
+  {
+    "audio": "what to do with this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "take care of this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "handle this issue",
+    "code": "# Target: Remediation needed\n# Issue: Unhandled exception in TLS certificate verification\n# Fix plan: Enforce verify=True in requests.get\nrequests.get(target_url, verify=False)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: SQL injection in search_query\n# Fix plan: Replace f-string with parameterized query\nquery = f'SELECT * FROM items WHERE name LIKE \"%{term}%\"'",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "what is wrong here",
+    "code": "# Finding ID: f-cred-03\n# Rule: hardcoded-api-key\n# Description: High entropy string detected matching AWS secret access key pattern\nAWS_SECRET_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+    "label": "explain"
+  },
+  {
+    "audio": "run a check on this",
+    "code": "def fetch_user_data(user_id):\n    # Standard database lookup\n    query = 'SELECT id, username FROM users WHERE id = %s'\n    return db.execute(query, (user_id,))",
+    "label": "review"
+  },
+  {
+    "audio": "what about this",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "resolve this issue",
+    "code": "# Target: Remediation needed\n# Issue: Command injection in subprocess.Popen shell=True\n# Fix plan: Pass arguments as list with shell=False\nsubprocess.Popen(f'ping -c 1 {host}', shell=True)",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "inspect this part",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  },
+  {
+    "audio": "patch this problem",
+    "code": "# Target: Remediation needed\n# Issue: Insecure temporary file creation\n# Fix plan: Use tempfile.NamedTemporaryFile with delete=True\ntemp_path = '/tmp/temp_report_' + str(random.randint(1, 1000))",
+    "label": "generate_fix"
+  },
+  {
+    "audio": "look at this",
+    "code": "# Finding ID: f-proto-05\n# Rule: prototype-pollution\n# Description: Recursive object merge does not protect __proto__ property",
+    "label": "explain"
+  },
+  {
+    "audio": "evaluate this",
+    "code": "class ConfigManager:\n    def __init__(self, path):\n        self.path = path\n    def load(self):\n        with open(self.path, 'r') as f:\n            return json.load(f)",
+    "label": "review"
+  }
 ]

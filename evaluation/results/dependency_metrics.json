@@ -1,0 +1,145 @@
+{
+  "manifest_file": "evaluation/test_samples/vulnerable_requirements.txt",
+  "manifest_content": "jinja2==2.10.1\nrequests==2.20.0\nflask==0.12",
+  "packages_checked": 3,
+  "packages": [
+    "jinja2==2.10.1",
+    "requests==2.20.0",
+    "flask==0.12"
+  ],
+  "osv_api_findings": 26,
+  "execution_time_s": 1.073,
+  "findings": [
+    {
+      "title": "Vulnerability in jinja2 (GHSA-cpwx-vrp4-4pq7)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-cpwx-vrp4-4pq7 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (GHSA-g3rq-g295-4j3m)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-g3rq-g295-4j3m affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (GHSA-h5c8-rqwp-cp95)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-h5c8-rqwp-cp95 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (GHSA-h75v-3vvj-5mfj)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-h75v-3vvj-5mfj affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (GHSA-q2x7-8rv6-6q7h)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-q2x7-8rv6-6q7h affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (PYSEC-2021-66)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2021-66 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (PYSEC-2026-1471)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1471 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (PYSEC-2026-1473)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1473 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (PYSEC-2026-1474)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1474 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in jinja2 (PYSEC-2026-1475)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1475 affecting jinja2 2.10.1."
+    },
+    {
+      "title": "Vulnerability in requests (GHSA-9hjg-9r4m-mvj7)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-9hjg-9r4m-mvj7 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (GHSA-9wx4-h78v-vm56)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-9wx4-h78v-vm56 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (GHSA-gc5v-m9x4-r6x2)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-gc5v-m9x4-r6x2 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (GHSA-j8r2-6x86-q33q)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-j8r2-6x86-q33q affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (PYSEC-2023-74)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2023-74 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (PYSEC-2026-1872)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1872 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (PYSEC-2026-1873)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-1873 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in requests (PYSEC-2026-2275)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-2275 affecting requests 2.20.0."
+    },
+    {
+      "title": "Vulnerability in flask (GHSA-562c-5r94-xh97)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-562c-5r94-xh97 affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (GHSA-5wv5-4vpf-pj6m)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-5wv5-4vpf-pj6m affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (GHSA-68rp-wp8r-4726)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-68rp-wp8r-4726 affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (GHSA-m2qf-hxjv-5gpq)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability GHSA-m2qf-hxjv-5gpq affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (PYSEC-2018-66)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2018-66 affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (PYSEC-2019-179)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2019-179 affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (PYSEC-2023-62)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2023-62 affecting flask 0.12."
+    },
+    {
+      "title": "Vulnerability in flask (PYSEC-2026-2151)",
+      "severity": "Severity.high",
+      "description": "Known vulnerability PYSEC-2026-2151 affecting flask 0.12."
+    }
+  ],
+  "note": "OSV API queried via batch endpoint. No /deps/scan backend route exists."
+}

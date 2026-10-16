@@ -1,0 +1,40 @@
+{
+  "health_ping_ms": {
+    "runs": 5,
+    "unit": "ms",
+    "min": 0.42,
+    "mean": 2.24,
+    "max": 9.3
+  },
+  "review_single_file_s": {
+    "runs": 3,
+    "unit": "s",
+    "min": 4.462,
+    "mean": 4.691,
+    "max": 4.944,
+    "avg_findings": 17
+  },
+  "prioritisation_eval_s": {
+    "runs": 3,
+    "unit": "s",
+    "min": 0.001,
+    "mean": 0.001,
+    "max": 0.001
+  },
+  "hardware": {
+    "cpu": "Intel Core i5-1135G7",
+    "ram_gb": 8,
+    "os": "Arch Linux",
+    "kernel": "6.18.48-1-lts",
+    "python": "3.14.7",
+    "note": "LLM scanner disabled (no API key); Semgrep + OSV only. Network time included in /review."
+  },
+  "multimodal_experiment_s": {
+    "runs": 3,
+    "unit": "s",
+    "min": 1.038,
+    "mean": 1.068,
+    "max": 1.116,
+    "note": "sklearn TF-IDF + LogisticRegression, 300 samples, 80/20 split"
+  }
+}
