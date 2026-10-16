@@ -37,6 +37,12 @@ const originalRequire = (Module.prototype as any).require;
         constructor(public id: string) {}
       },
       ViewColumn: { Beside: 2 },
+      commands: {
+        executeCommand: async (...args: any[]) => {
+          ((globalThis as any).__executedCommands ??= []).push(args[0]);
+          return undefined;
+        },
+      },
     };
   }
   return originalRequire.apply(this, arguments);
@@ -51,6 +57,7 @@ import {
   localVad,
   HysteresisVadEngine,
   SttLifecycleManager,
+  VoiceController,
 } from '../voiceController';
 
 let passed = 0;
@@ -1086,8 +1093,480 @@ test('P5-5. Voice explain error path produces error notice and completes STT lif
   assertEq(mgr.getCurrentSession()?.state, 'COMPLETED');
 });
 
-console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);
+// ─── Phase 6: Webview Permissions Policy & Fallback Simulator Tests ─────────
 
-if (failed > 0) {
-  process.exit(1);
+console.log('\n--- Phase 6 Webview Permissions Policy & Fallback Simulator Tests ---');
+
+test('P6-1. getVoiceWebviewHtml includes Permissions Policy violation detection logic', () => {
+  const html = VoiceController.getVoiceWebviewHtml({
+    onThresholdDb: -30,
+    offThresholdDb: -42,
+    onDurationMs: 80,
+    offDurationMs: 400,
+  });
+
+  // Verify that the webview script detects permissions policy violation
+  assertEq(html.includes('permissions policy'), true, 'Should check for permissions policy error message');
+  assertEq(html.includes('not allowed'), true, 'Should check for not allowed error condition');
+  assertEq(html.includes('micBlockedByPolicy = true'), true, 'Should set micBlockedByPolicy flag to stop render loop');
+});
+
+test('P6-2. getVoiceWebviewHtml renders fallback simulator buttons and hint container', () => {
+  const html = VoiceController.getVoiceWebviewHtml({
+    onThresholdDb: -30,
+    offThresholdDb: -42,
+    onDurationMs: 80,
+    offDurationMs: 400,
+  });
+
+  // Verify UI elements exist in markup
+  assertEq(html.includes('id="fallback-hint"'), true, 'Should contain fallback hint container');
+  assertEq(html.includes('Fallback Command Simulator:'), true, 'Should contain simulator label');
+  assertEq(html.includes('sendManualCommand'), true, 'Should define sendManualCommand function');
+  assertEq(html.includes("sendManualCommand('review this file')"), true, 'Should have Review button');
+  assertEq(html.includes("sendManualCommand('show critical findings')"), true, 'Should have Critical button');
+  assertEq(html.includes("sendManualCommand('explain finding 1')"), true, 'Should have Explain button');
+  assertEq(html.includes("sendManualCommand('generate a fix for finding 1')"), true, 'Should have Fix button');
+  assertEq(html.includes("sendManualCommand('accept finding 1')"), true, 'Should have Accept button');
+  assertEq(html.includes("sendManualCommand('reject finding 1')"), true, 'Should have Reject button');
+});
+
+test('P6-3. All fallback simulator commands parse into valid deterministic intents', () => {
+  const simulatorCommands = [
+    { text: 'review this file', expected: 'review' },
+    { text: 'show critical findings', expected: 'show_critical' },
+    { text: 'explain finding 1', expected: 'explain' },
+    { text: 'generate a fix for finding 1', expected: 'generate_fix' },
+    { text: 'accept finding 1', expected: 'accept' },
+    { text: 'reject finding 1', expected: 'reject' },
+  ];
+
+  for (const item of simulatorCommands) {
+    const intent = parseVoiceIntent(item.text);
+    assertEq(intent.command, item.expected, `Command "${item.text}" should parse as "${item.expected}"`);
+    assertEq(intent.confidence >= 0.9, true, `Command "${item.text}" should have high confidence`);
+  }
+});
+
+test('P6-4. Fallback simulator message format satisfies processTranscript requirements', () => {
+  // Verifying message contract posted by sendManualCommand
+  const simulatedMessage = {
+    type: 'transcript',
+    transcript: 'review this file',
+    energyDb: -20.0,
+    sessionId: 1,
+    vadState: 'COMMAND_PROCESSING'
+  };
+
+  assertEq(simulatedMessage.type, 'transcript');
+  assertEq(typeof simulatedMessage.transcript, 'string');
+  assertEq(simulatedMessage.transcript.length > 0, true);
+  assertEq(typeof simulatedMessage.energyDb, 'number');
+  assertEq(typeof simulatedMessage.sessionId, 'number');
+});
+
+console.log('\n--- Phase 7 Local Offline Vosk & Audio Recording Tests ---');
+
+test('P7-1. getVoiceWebviewHtml renders Start/Stop recording controls and offline Vosk privacy notice', () => {
+  const html = VoiceController.getVoiceWebviewHtml({
+    onThresholdDb: -30,
+    offThresholdDb: -42,
+    onDurationMs: 80,
+    offDurationMs: 400,
+  });
+
+  assertEq(html.includes('id="recordBtn"'), true, 'Should contain recording button');
+  assertEq(html.includes('toggleNativeRecord()'), true, 'Should wire record button to toggleNativeRecord');
+  assertEq(html.includes('id="privacy-disclosure"'), true, 'Should contain privacy disclosure container');
+  assertEq(html.includes('transcribed entirely offline using local Vosk'), true, 'Privacy notice must mention local Vosk');
+  assertEq(html.includes('No audio or data is ever sent to the cloud'), true, 'Privacy notice must guarantee zero cloud upload');
+});
+
+test('P7-2. Webview message handler supports transcribing and error states for offline Vosk', () => {
+  const html = VoiceController.getVoiceWebviewHtml({
+    onThresholdDb: -30,
+    offThresholdDb: -42,
+    onDurationMs: 80,
+    offDurationMs: 400,
+  });
+
+  assertEq(html.includes("msg.state === 'recording'"), true, 'Should handle recording state');
+  assertEq(html.includes("msg.state === 'transcribing'"), true, 'Should handle transcribing state');
+  assertEq(html.includes("Transcribing Audio (Local Vosk)"), true, 'Should display Local Vosk transcribing badge');
+  assertEq(html.includes("msg.state === 'idle'"), true, 'Should handle idle state');
+  assertEq(html.includes("msg.state === 'error'"), true, 'Should handle error state');
+});
+
+test('P7-3. Local Vosk transcribed text dispatches cleanly through parseVoiceIntent pipeline', () => {
+  const recognizedVosks = [
+    { speech: 'review this file', expected: 'review' },
+    { speech: 'show critical findings', expected: 'show_critical' },
+    { speech: 'explain finding 2', expected: 'explain' },
+    { speech: 'generate a fix for finding 1', expected: 'generate_fix' },
+    { speech: 'accept finding 3', expected: 'accept' },
+    { speech: 'reject finding 3', expected: 'reject' },
+  ];
+
+  for (const item of recognizedVosks) {
+    const intent = parseVoiceIntent(item.speech);
+    assertEq(intent.command, item.expected, `Vosk transcript "${item.speech}" should map to command "${item.expected}"`);
+    assertEq(intent.confidence >= 0.9, true);
+  }
+});
+
+test('P7-4. Audio recorder detection covers parecord and arecord on Linux', () => {
+  // Verify that system detects either parecord or arecord
+  const child_process = require('child_process');
+  let hasParecord = false;
+  let hasArecord = false;
+
+  try {
+    child_process.execSync('which parecord', { stdio: 'ignore' });
+    hasParecord = true;
+  } catch { /* ignore */ }
+
+  try {
+    child_process.execSync('which arecord', { stdio: 'ignore' });
+    hasArecord = true;
+  } catch { /* ignore */ }
+
+  assertEq(hasParecord || hasArecord, true, 'At least one Linux audio recording utility (parecord or arecord) should be present');
+});
+
+
+// ─── Phase 9: Voice lifecycle regression tests (MOCKED — no real microphone) ─
+//
+// These reproduce the "status bar stuck on Processing…" defect: before the fix,
+// processTranscript() returned early (VAD reject, wake-word miss, empty) without
+// restoring the status bar that stopNativeRecording() had set to "Processing…".
+
+import * as fsT from 'fs';
+import * as osT from 'os';
+import * as pathT from 'path';
+import { EventEmitter } from 'events';
+import { AxiosError } from 'axios';
+import { ApiClient } from '../apiClient';
+
+type AsyncCase = { name: string; fn: () => Promise<void> };
+const asyncCases: AsyncCase[] = [];
+function testAsync(name: string, fn: () => Promise<void>) {
+  asyncCases.push({ name, fn });
 }
+
+function makeController(apiOverrides: Record<string, any> = {}, findings: any[] = []) {
+  const api: any = {
+    sendVoiceCommand: async () => ({}),
+    transcribeAudio: async () => ({ transcript: '' }),
+    ...apiOverrides,
+  };
+  const controller = new VoiceController(api, {} as any, {
+    getFindings: () => findings,
+    getFocusedFinding: () => undefined,
+  });
+  const messages: any[] = [];
+  (controller as any).activePanel = { webview: { postMessage: (m: any) => messages.push(m) }, dispose: () => {} };
+  (globalThis as any).__executedCommands = [];
+  return { controller, api, messages };
+}
+
+function assertNotProcessing(c: VoiceController, ctx: string) {
+  assertEq(c.getStatusBarText().includes('Processing'), false, `${ctx}: status bar must not stay on Processing (got "${c.getStatusBarText()}")`);
+  assertEq(c.getBusyCount(), 0, `${ctx}: busy count must return to 0`);
+}
+
+function tmpWav(bytes: number): string {
+  const p = pathT.join(osT.tmpdir(), `ai_review_test_${Date.now()}_${Math.random().toString(36).slice(2)}.wav`);
+  fsT.writeFileSync(p, Buffer.alloc(bytes, 1));
+  return p;
+}
+
+/** Fake recorder process that exits when signalled (like parecord on SIGINT). */
+function fakeProc(): any {
+  const p: any = new EventEmitter();
+  p.exitCode = null;
+  p.signalCode = null;
+  p.killed = [];
+  p.kill = (sig: string) => {
+    p.killed.push(sig);
+    setImmediate(() => { p.signalCode = sig; p.emit('exit', null, sig); });
+    return true;
+  };
+  return p;
+}
+
+function arm(c: VoiceController, wavPath: string | null) {
+  const proc = fakeProc();
+  (c as any).isRecording = true;
+  (c as any).recordingProcess = proc;
+  (c as any).recordingFilePath = wavPath;
+  return proc;
+}
+
+const executed = () => ((globalThis as any).__executedCommands ?? []) as string[];
+const states = (msgs: any[]) => msgs.filter((m) => m.type === 'recordingState').map((m) => m.state);
+const lastVoiceStatus = (msgs: any[]) => msgs.filter((m) => m.type === 'voiceStatus').pop();
+
+// ── Transcript processing terminal paths ──────────────────────────────────
+
+testAsync('P9-1. Continuous transcript without wake word restores status (original stuck-Processing bug)', async () => {
+  const { controller } = makeController();
+  for (let i = 0; i < 10; i++) { (controller as any).vadEngine.processFrame(-20); } // sustained speech
+  const out = await controller.processTranscript('show critical findings', -20, 1);
+  assertEq(out, 'no_wake_word');
+  assertNotProcessing(controller, 'no wake word');
+});
+
+testAsync('P9-2. Continuous transcript rejected by VAD restores status', async () => {
+  const { controller } = makeController();
+  const out = await controller.processTranscript('review this file', -80, 2);
+  assertEq(out, 'vad_rejected');
+  assertNotProcessing(controller, 'vad rejected');
+});
+
+testAsync('P9-2b. Single-frame VAD cannot pass onset (why explicit mic/simulator input must bypass it)', async () => {
+  const { controller } = makeController();
+  const out = await controller.processTranscript('review this file', -20, 99);
+  assertEq(out, 'vad_rejected', 'one -20 dB frame < 80 ms onset');
+  assertNotProcessing(controller, 'single-frame vad');
+});
+
+testAsync('P9-3. Empty transcript is reported and leaves status idle', async () => {
+  const { controller, messages } = makeController();
+  const out = await controller.processTranscript('   ', -20, 3, { source: 'microphone' });
+  assertEq(out, 'empty');
+  assertEq(lastVoiceStatus(messages).phase, 'empty');
+  assertNotProcessing(controller, 'empty');
+});
+
+testAsync('P9-4. Microphone "review this file" dispatches review exactly once and restores status', async () => {
+  const { controller, messages } = makeController();
+  const out = await controller.processTranscript('review this file', -20, 4, { source: 'microphone' });
+  assertEq(out, 'executed');
+  assertDeepEq(executed(), ['aiReview.reviewFile']);
+  const vs = lastVoiceStatus(messages);
+  assertEq(vs.transcript, 'review this file', 'panel shows the heard transcript');
+  assertEq(vs.command, 'review');
+  assertNotProcessing(controller, 'executed');
+});
+
+testAsync('P9-5. Vosk misrecognition "reveal this" maps to read-only review', async () => {
+  const { controller } = makeController();
+  const out = await controller.processTranscript('reveal this', -20, 5, { source: 'microphone' });
+  assertEq(out, 'executed');
+  assertDeepEq(executed(), ['aiReview.reviewFile']);
+});
+
+testAsync('P9-6. Unknown transcript ("hello") is shown, not executed, status restored', async () => {
+  const { controller, messages } = makeController();
+  const out = await controller.processTranscript('hello', -20, 6, { source: 'microphone' });
+  assertEq(out, 'unknown_command');
+  assertDeepEq(executed(), []);
+  assertEq(lastVoiceStatus(messages).transcript, 'hello');
+  assertNotProcessing(controller, 'unknown');
+});
+
+testAsync('P9-7. Command dispatch failure is surfaced and status restored', async () => {
+  const { controller, messages } = makeController();
+  (controller as any).executeVoiceCommand = async () => { throw new Error('dispatch boom'); };
+  const out = await controller.processTranscript('review this file', -20, 7, { source: 'microphone' });
+  assertEq(out, 'failed');
+  assertEq(lastVoiceStatus(messages).detail.includes('dispatch boom'), true);
+  assertNotProcessing(controller, 'dispatch failure');
+});
+
+testAsync('P9-8. Parser/gate exception is caught and status restored', async () => {
+  const { controller } = makeController();
+  for (let i = 0; i < 10; i++) { (controller as any).vadEngine.processFrame(-20); } // sustained speech
+  const evil: any = { trim: () => 'review', toLowerCase: () => { throw new Error('parse boom'); } };
+  const out = await controller.processTranscript(evil, -20, 8);
+  assertEq(out, 'failed');
+  assertNotProcessing(controller, 'parser exception');
+});
+
+testAsync('P9-9. Microphone accept/reject requires confirmation (dismissed → not executed)', async () => {
+  const { controller } = makeController({}, [{ id: 'f1', title: 'SQLi' }]);
+  const a = await controller.processTranscript('accept finding 1', -20, 9, { source: 'microphone' });
+  const r = await controller.processTranscript('reject finding 1', -20, 10, { source: 'microphone' });
+  assertEq(a, 'cancelled');
+  assertEq(r, 'cancelled');
+  assertDeepEq(executed(), []);
+  assertNotProcessing(controller, 'cancelled');
+});
+
+testAsync('P9-10. Duplicate session id dispatches only once', async () => {
+  const { controller } = makeController();
+  await controller.processTranscript('review this file', -20, 11, { source: 'microphone' });
+  const second = await controller.processTranscript('review this file', -20, 11, { source: 'microphone' });
+  assertEq(second, 'duplicate');
+  assertDeepEq(executed(), ['aiReview.reviewFile']);
+});
+
+testAsync('P9-11. Simulator commands work without wake word (simulator regression)', async () => {
+  const { controller } = makeController();
+  const out = await controller.processTranscript('show critical findings', -20, 12, { source: 'simulator' });
+  assertEq(out, 'executed');
+  assertDeepEq(executed(), ['aiReview.showCritical']);
+  assertNotProcessing(controller, 'simulator');
+});
+
+testAsync('P9-12. Overlapping operations: status stays Processing until the last one finishes', async () => {
+  const { controller } = makeController();
+  let releaseSlow: () => void = () => {};
+  let call = 0;
+  (controller as any).executeVoiceCommand = () => {
+    call++;
+    return call === 1 ? new Promise<void>((res) => { releaseSlow = res; }) : Promise.resolve();
+  };
+  const slow = controller.processTranscript('review this file', -20, 13, { source: 'simulator' });
+  await controller.processTranscript('show critical', -20, 14, { source: 'simulator' });
+  assertEq(controller.getStatusBarText().includes('Processing'), true, 'slow op still in flight');
+  releaseSlow();
+  await slow;
+  assertNotProcessing(controller, 'overlap');
+});
+
+// ── Native recording → transcription → dispatch ───────────────────────────
+
+testAsync('P9-13. Stop recording: SIGINT awaited, transcript dispatched, temp file deleted, UI reset', async () => {
+  const wav = tmpWav(16044);
+  const { controller, messages } = makeController({ transcribeAudio: async () => ({ transcript: 'review this file' }) });
+  const proc = arm(controller, wav);
+  await controller.stopNativeRecording();
+  assertDeepEq(proc.killed, ['SIGINT']);
+  assertDeepEq(states(messages), ['transcribing', 'idle']);
+  assertDeepEq(executed(), ['aiReview.reviewFile']);
+  assertEq(fsT.existsSync(wav), false, 'temp WAV removed');
+  assertNotProcessing(controller, 'stop success');
+});
+
+testAsync('P9-14. HTTP 503 (model missing) is surfaced with detail; UI and status reset', async () => {
+  const wav = tmpWav(16044);
+  const err = new AxiosError('Request failed', 'ERR_BAD_RESPONSE', undefined, undefined,
+    { status: 503, data: { detail: 'Vosk model not found' } } as any);
+  const { controller, messages } = makeController({ transcribeAudio: async () => { throw err; } });
+  arm(controller, wav);
+  await controller.stopNativeRecording();
+  const errMsg = messages.find((m) => m.type === 'recordingState' && m.state === 'error');
+  assertEq(!!errMsg && errMsg.error.includes('Vosk model not found'), true, 'error detail shown');
+  assertEq(fsT.existsSync(wav), false);
+  assertNotProcessing(controller, 'http 503');
+});
+
+testAsync('P9-15. Backend connection refused gives actionable message', async () => {
+  const wav = tmpWav(16044);
+  const { controller, messages } = makeController({ transcribeAudio: async () => { throw new AxiosError('connect ECONNREFUSED', 'ECONNREFUSED'); } });
+  arm(controller, wav);
+  await controller.stopNativeRecording();
+  const errMsg = messages.find((m) => m.state === 'error');
+  assertEq(errMsg.error.includes('Backend is not running'), true);
+  assertNotProcessing(controller, 'conn refused');
+});
+
+testAsync('P9-16. Header-only WAV is rejected before upload; cleanup + reset', async () => {
+  const wav = tmpWav(44);
+  let uploaded = false;
+  const { controller, messages } = makeController({ transcribeAudio: async () => { uploaded = true; return { transcript: 'x' }; } });
+  arm(controller, wav);
+  await controller.stopNativeRecording();
+  assertEq(uploaded, false);
+  assertEq(states(messages).includes('error'), true);
+  assertEq(fsT.existsSync(wav), false);
+  assertNotProcessing(controller, 'invalid wav');
+});
+
+testAsync('P9-17. Missing recording file is reported; status reset', async () => {
+  const { controller, messages } = makeController();
+  arm(controller, pathT.join(osT.tmpdir(), 'ai_review_does_not_exist.wav'));
+  await controller.stopNativeRecording();
+  assertEq(states(messages).includes('error'), true);
+  assertNotProcessing(controller, 'missing file');
+});
+
+testAsync('P9-18. Empty transcript from Vosk is shown in panel, no command, status reset', async () => {
+  const wav = tmpWav(16044);
+  const { controller, messages } = makeController({ transcribeAudio: async () => ({ transcript: '' }) });
+  arm(controller, wav);
+  await controller.stopNativeRecording();
+  assertEq(lastVoiceStatus(messages).phase, 'empty');
+  assertDeepEq(executed(), []);
+  assertNotProcessing(controller, 'empty vosk');
+});
+
+testAsync('P9-19. Recorder spawn failure falls back to next recorder; cancel kills it', async () => {
+  const { controller, messages } = makeController();
+  const node = process.execPath;
+  (controller as any).resolveRecorders = (fp: string) => [
+    { exe: '/nonexistent/recorder-binary', args: [fp] },
+    { exe: node, args: ['-e', 'setInterval(() => {}, 1000)', fp] },
+  ];
+  await controller.startNativeRecording();
+  await new Promise((r) => setTimeout(r, 300));
+  assertEq((controller as any).isRecording, true, 'fell back to second recorder');
+  const proc = (controller as any).recordingProcess;
+  assertEq(!!proc && proc.spawnfile === node, true);
+  controller.cancelNativeRecording();
+  await new Promise((r) => setTimeout(r, 200));
+  assertEq(proc.killed, true, 'fallback recorder terminated');
+  assertEq(states(messages).includes('error'), false, 'expected cancel is not reported as error');
+  assertNotProcessing(controller, 'fallback+cancel');
+});
+
+testAsync('P9-20. Recorder exiting unexpectedly (no fallback) reports error and resets', async () => {
+  const { controller, messages } = makeController();
+  (controller as any).resolveRecorders = (fp: string) => [
+    { exe: process.execPath, args: ['-e', 'process.stderr.write("device busy"); process.exit(3)', fp] },
+  ];
+  await controller.startNativeRecording();
+  await new Promise((r) => setTimeout(r, 500));
+  assertEq((controller as any).isRecording, false);
+  const err = messages.find((m) => m.state === 'error');
+  assertEq(!!err && err.error.includes('device busy'), true, 'stderr surfaced');
+  assertNotProcessing(controller, 'recorder exit');
+});
+
+// ── UI wiring + error formatting ──────────────────────────────────────────
+
+test('P9-21. Webview handles voiceStatus, resets badge on idle, simulator tags source', () => {
+  const html = VoiceController.getVoiceWebviewHtml({ onThresholdDb: -30, offThresholdDb: -42, onDurationMs: 80, offDurationMs: 400 } as any);
+  assertEq(html.includes("msg.type === 'voiceStatus'"), true);
+  assertEq(html.includes("source: 'simulator'"), true);
+  assertEq(html.includes("'Heard: \"'"), true);
+});
+
+test('P9-22. normalizeTranscript Vosk corrections are narrow', () => {
+  assertEq(normalizeTranscript('reveal this'), 'review this');
+  assertEq(normalizeTranscript('Reveal this file.'), 'review this file');
+  assertEq(normalizeTranscript('re view the code'), 'review the code');
+  assertEq(normalizeTranscript('hello reveal this'), 'review this');
+  assertEq(normalizeTranscript('reveal'), 'reveal', 'bare word not rewritten');
+  assertEq(parseVoiceIntent('reveal').command, 'unknown');
+  assertEq(parseVoiceIntent('accept finding 2').command, 'accept', 'consequential commands untouched');
+});
+
+test('P9-23. ApiClient.formatError covers refused, timeout, structured detail', () => {
+  assertEq(ApiClient.formatError(new AxiosError('x', 'ECONNREFUSED')).includes('not running'), true);
+  assertEq(ApiClient.formatError(new AxiosError('x', 'ECONNABORTED')).includes('timed out'), true);
+  const e422 = new AxiosError('x', 'ERR_BAD_REQUEST', undefined, undefined, { status: 422, data: { detail: [{ msg: 'field required' }] } } as any);
+  assertEq(ApiClient.formatError(e422), 'HTTP 422: [{"msg":"field required"}]');
+  assertEq(ApiClient.formatError(new Error('plain')), 'plain');
+});
+
+(async () => {
+  for (const c of asyncCases) {
+    try {
+      await c.fn();
+      passed++;
+      console.log(`  ✓ ${c.name}`);
+    } catch (err: any) {
+      failed++;
+      console.error(`  ✗ ${c.name}`);
+      console.error(`    ${err.message}`);
+    }
+  }
+
+  console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);
+
+  if (failed > 0) {
+    process.exit(1);
+  }
+})();

@@ -7,12 +7,15 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as FormData from 'form-data';
 import {
   ReviewResponse,
   ExplainResponse,
   FixResponse,
   FeedbackEvent,
   VoiceCommand,
+  TranscribeResponse,
 } from './types';
 
 export class ApiClient {
@@ -114,13 +117,42 @@ export class ApiClient {
     return res.data;
   }
 
+  /**
+   * POST /voice/transcribe
+   * Upload recorded audio file for cloud transcription.
+   */
+  async transcribeAudio(audioFilePath: string): Promise<TranscribeResponse> {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(audioFilePath), {
+      filename: 'voice_command.wav',
+      contentType: 'audio/wav',
+    });
+
+    const res = await this.client.post<TranscribeResponse>('/voice/transcribe', form, {
+      headers: form.getHeaders(),
+      timeout: 30_000,
+    });
+    return res.data;
+  }
+
   /** Format axios errors for user-facing messages */
   static formatError(err: unknown): string {
     if (err instanceof AxiosError) {
       if (err.code === 'ECONNREFUSED') {
         return 'Backend is not running. Start the FastAPI server first.';
       }
-      return err.response?.data?.detail ?? err.message;
+      if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+        return 'Backend request timed out. Check that the FastAPI server is responsive.';
+      }
+      const detail = err.response?.data?.detail;
+      if (detail !== undefined && detail !== null) {
+        const text = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        return err.response?.status ? `HTTP ${err.response.status}: ${text}` : text;
+      }
+      return err.message;
+    }
+    if (err instanceof Error) {
+      return err.message;
     }
     return String(err);
   }

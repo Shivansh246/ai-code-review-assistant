@@ -30,6 +30,10 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as child_process from 'child_process';
 import { ApiClient } from './apiClient';
 import {
   VoiceCommand,
@@ -511,6 +515,15 @@ export function normalizeTranscript(raw: string): string {
     text = 'show ' + text.substring(8).trim();
   }
 
+  // Offline Vosk (small model) acoustic confusions for "review".
+  // Deliberately narrow: only rewrites the leading word, only when followed by
+  // a review target, and only to the read-only "review" command. Consequential
+  // commands (accept/reject/fix) are never produced by this correction.
+  text = text.replace(
+    /^(?:reveal|re view|preview|revue|reviewed|reviews)(?=\s+(?:this|the|my|current|active|file|code|repo|repository)\b)/,
+    'review'
+  );
+
   return text.trim();
 }
 
@@ -661,6 +674,20 @@ export function parseVoiceCommand(transcript: string): VoiceCommandType {
 
 // ─── Voice Controller (Phase 2 & 3 Robust Lifecycle) ────────────────────────
 
+/** Where a transcript came from. Explicit sources bypass wake-word/VAD gates. */
+export type VoiceInputSource = 'continuous' | 'simulator' | 'microphone';
+
+/** Terminal outcome of processTranscript (also shown in the voice panel). */
+export type VoiceOutcome =
+  | 'empty'
+  | 'duplicate'
+  | 'vad_rejected'
+  | 'no_wake_word'
+  | 'unknown_command'
+  | 'cancelled'
+  | 'executed'
+  | 'failed';
+
 export class VoiceController {
   private statusBarItem: vscode.StatusBarItem;
   private isListening = false;
@@ -670,6 +697,23 @@ export class VoiceController {
   private lastProcessedSessionId: number = -1;
   private metrics = new VoiceMetricsTracker();
   private activePanel: vscode.WebviewPanel | undefined;
+
+  // Native host microphone recording state
+  private recordingProcess: child_process.ChildProcess | null = null;
+  private recordingFilePath: string | null = null;
+  private isRecording = false;
+
+  /**
+   * Number of in-flight voice operations (transcription + command dispatch).
+   * The status bar shows "Processing…" only while this is > 0; the operation
+   * that brings it back to 0 restores the ready/idle state. This prevents one
+   * overlapping session from clobbering another's status.
+   */
+  private busyCount = 0;
+
+  /** Last focused text editor; webview focus makes activeTextEditor undefined. */
+  private lastTextEditor: vscode.TextEditor | undefined;
+  private editorSubscription: vscode.Disposable | undefined;
 
   constructor(
     private readonly api: ApiClient,
@@ -686,6 +730,13 @@ export class VoiceController {
     this.statusBarItem.command = 'aiReview.startVoice';
     this.updateStatusBar('idle');
     this.statusBarItem.show();
+
+    this.lastTextEditor = vscode.window.activeTextEditor;
+    this.editorSubscription = vscode.window.onDidChangeActiveTextEditor?.((editor) => {
+      if (editor) {
+        this.lastTextEditor = editor;
+      }
+    });
 
     const cfg = vscode.workspace.getConfiguration('aiReview');
     this.wakeWord = cfg.get<string>('wakeWord', 'review');
@@ -729,108 +780,145 @@ export class VoiceController {
 
   /** Stop listening */
   stop(): void {
+    this.cancelNativeRecording();
     this.isListening = false;
-    this.updateStatusBar('idle');
+    this.restoreStatusBar();
     this.sttLifecycle.reset();
     this.activePanel?.dispose();
     vscode.window.showInformationMessage('🔇 Voice control stopped.');
   }
 
   /**
-   * Process a recognised transcript from the webview.
-   * Called when the webview posts a message.
+   * Process a recognised transcript.
+   *
+   * Sources:
+   * - 'continuous' (default): hands-free webview STT; wake-word + VAD gated.
+   * - 'simulator': explicit typed/clicked command from the fallback simulator.
+   * - 'microphone': explicit push-to-talk recording transcribed by local Vosk.
+   *
+   * Explicit sources skip the wake-word and single-frame VAD gates because the
+   * user deliberately initiated them. Every exit path restores the status bar
+   * (try/finally + busy counter) and reports the outcome to the voice panel.
    */
   async processTranscript(
     transcript: string,
     audioEnergyDb: number,
-    sessionId?: number
-  ): Promise<void> {
+    sessionId?: number,
+    options: { source?: VoiceInputSource } = {}
+  ): Promise<VoiceOutcome> {
+    const source: VoiceInputSource = options.source ?? 'continuous';
+    const explicit = source !== 'continuous';
+
     if (!transcript || !transcript.trim()) {
-      return; // Ignore empty/whitespace transcripts
+      this.postVoiceStatus('empty', '', 'No speech was recognised. Please try again.');
+      return 'empty';
     }
 
     // Invariant: at most one voice command dispatched per STT session
     if (sessionId !== undefined) {
       if (this.lastProcessedSessionId === sessionId) {
-        return; // Guard against duplicate dispatch for the same session
+        return 'duplicate'; // Guard against duplicate dispatch for the same session
       }
       this.lastProcessedSessionId = sessionId;
     }
 
     const t0 = Date.now();
+    let outcome: VoiceOutcome = 'failed';
+    let detail = '';
+    let command: VoiceCommandType | undefined;
 
-    // ── Step 1: Local VAD check ────────────────────────────────────────────
-    const cfg = vscode.workspace.getConfiguration('aiReview');
-    const onDb = cfg.get<number>('vadOnThresholdDb', -30.0);
-    const offDb = cfg.get<number>('vadOffThresholdDb', -42.0);
-
-    this.vadEngine.updateConfig({
-      onThresholdDb: onDb,
-      offThresholdDb: offDb,
-    });
-
-    const vad = this.vadEngine.processFrame(audioEnergyDb);
-    this.metrics.recordVadActivation(!vad.is_speech);
-
-    if (!vad.is_speech) {
-      // Background noise / silence — skip silently
-      this.sttLifecycle.finishCommandProcessing(sessionId);
-      this.notifyWebviewCommandCompleted(sessionId);
-      return;
-    }
-
-    // ── Step 2: Transcript Wake-word Gate ─────────────────────────────────
-    const wakeWordFound = transcript
-      .toLowerCase()
-      .includes(this.wakeWord.toLowerCase());
-
-    if (!wakeWordFound) {
-      this.metrics.recordActivation(false);
-      this.metrics.recordVadActivation(true); // VAD passed but wake word missing
-      this.sttLifecycle.finishCommandProcessing(sessionId);
-      this.notifyWebviewCommandCompleted(sessionId);
-      return;
-    }
-
-    this.metrics.recordActivation(true);
-    this.updateStatusBar('processing');
-
-    // ── Step 3: Parse intent (full intent with entities, not just command type) ─
-    const intent = parseVoiceIntent(transcript);
-
-    if (intent.command === 'unknown') {
-      this.metrics.recordMissedCommand();
-      this.speak('I didn\'t recognise that command. Try: review, explain, show critical, generate fix, accept, or reject.');
-      this.updateStatusBar('listening');
-      this.sttLifecycle.finishCommandProcessing(sessionId);
-      this.notifyWebviewCommandCompleted(sessionId);
-      return;
-    }
-
-    // ── Step 4: Build command payload + execute ───────────────────────────
-    const editor = vscode.window.activeTextEditor;
-    const cmd: VoiceCommand = {
-      transcript,
-      command: intent.command,
-      file_path: editor?.document.uri.fsPath,
-      code_context: editor?.document.getText(),
-      finding_index: intent.finding_index,
-      severity: intent.severity,
-      target: intent.target,
-    };
+    this.beginBusy();
+    this.postVoiceStatus('processing', transcript, 'Processing command…');
 
     try {
+      if (!explicit) {
+        // ── Step 1: Local VAD check (continuous mode only) ────────────────
+        const cfg = vscode.workspace.getConfiguration('aiReview');
+        this.vadEngine.updateConfig({
+          onThresholdDb: cfg.get<number>('vadOnThresholdDb', -30.0),
+          offThresholdDb: cfg.get<number>('vadOffThresholdDb', -42.0),
+        });
+
+        const vad = this.vadEngine.processFrame(audioEnergyDb);
+        this.metrics.recordVadActivation(!vad.is_speech);
+
+        if (!vad.is_speech) {
+          outcome = 'vad_rejected';
+          detail = 'Ignored: background noise / silence.';
+          return outcome;
+        }
+
+        // ── Step 2: Transcript Wake-word Gate (continuous mode only) ──────
+        const wakeWordFound = transcript
+          .toLowerCase()
+          .includes(this.wakeWord.toLowerCase());
+
+        if (!wakeWordFound) {
+          this.metrics.recordActivation(false);
+          this.metrics.recordVadActivation(true); // VAD passed but wake word missing
+          outcome = 'no_wake_word';
+          detail = `Ignored: wake word "${this.wakeWord}" not heard.`;
+          return outcome;
+        }
+      }
+
+      this.metrics.recordActivation(true);
+
+      // ── Step 3: Parse intent (full intent with entities) ─────────────────
+      const intent = parseVoiceIntent(transcript);
+      command = intent.command;
+
+      if (intent.command === 'unknown') {
+        this.metrics.recordMissedCommand();
+        this.speak('I didn\'t recognise that command. Try: review, explain, show critical, generate fix, accept, or reject.');
+        outcome = 'unknown_command';
+        detail = 'No command matched. Try: "review this file", "show critical findings", "explain finding 1".';
+        return outcome;
+      }
+
+      // ── Step 3b: Confirm consequential commands from uncertain mic input ─
+      // Vosk provides no reliable confidence, so feedback-changing commands
+      // spoken into the microphone require explicit user confirmation.
+      if (source === 'microphone' && (intent.command === 'accept' || intent.command === 'reject')) {
+        const choice = await vscode.window.showWarningMessage(
+          `Voice heard: "${transcript}". Confirm ${intent.command}?`,
+          { modal: true },
+          'Confirm'
+        );
+        if (choice !== 'Confirm') {
+          outcome = 'cancelled';
+          detail = `Cancelled: ${intent.command} was not confirmed.`;
+          return outcome;
+        }
+      }
+
+      // ── Step 4: Build command payload + execute ───────────────────────────
+      const editor = vscode.window.activeTextEditor ?? this.lastTextEditor;
+      const cmd: VoiceCommand = {
+        transcript,
+        command: intent.command,
+        file_path: editor?.document.uri.fsPath,
+        code_context: editor?.document.getText(),
+        finding_index: intent.finding_index,
+        severity: intent.severity,
+        target: intent.target,
+      };
+
       await this.executeVoiceCommand(intent, cmd);
-      const latency = Date.now() - t0;
-      this.metrics.recordLatency(latency);
+      this.metrics.recordLatency(Date.now() - t0);
+      outcome = 'executed';
+      detail = `Executed: ${intent.command}`;
+      return outcome;
     } catch (err) {
-      vscode.window.showErrorMessage(
-        `Voice command failed: ${ApiClient.formatError(err)}`
-      );
+      outcome = 'failed';
+      detail = `Voice command failed: ${ApiClient.formatError(err)}`;
+      vscode.window.showErrorMessage(detail);
+      return outcome;
     } finally {
       this.sttLifecycle.finishCommandProcessing(sessionId);
       this.notifyWebviewCommandCompleted(sessionId);
-      this.updateStatusBar('listening');
+      this.postVoiceStatus(outcome, transcript, detail, command);
+      this.endBusy();
     }
   }
 
@@ -875,8 +963,20 @@ export class VoiceController {
   }
 
   dispose(): void {
+    this.cancelNativeRecording();
+    this.editorSubscription?.dispose();
     this.statusBarItem.dispose();
     this.activePanel?.dispose();
+  }
+
+  /** Current status-bar text (exposed for lifecycle regression tests). */
+  getStatusBarText(): string {
+    return this.statusBarItem.text;
+  }
+
+  /** Number of in-flight voice operations (exposed for tests). */
+  getBusyCount(): number {
+    return this.busyCount;
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -888,6 +988,7 @@ export class VoiceController {
     switch (intent.command) {
       case 'review':
         this.speak('Starting code review.');
+        await this.focusLastTextEditor();
         await vscode.commands.executeCommand('aiReview.reviewFile');
         break;
 
@@ -1013,14 +1114,83 @@ export class VoiceController {
     });
   }
 
-  private updateStatusBar(state: 'idle' | 'listening' | 'processing'): void {
-    const icons = { idle: '$(mic)', listening: '$(radio-tower)', processing: '$(loading~spin)' };
-    const labels = { idle: 'AI Voice', listening: 'Listening (VAD Gate)…', processing: 'Processing…' };
+  private updateStatusBar(state: 'idle' | 'listening' | 'recording' | 'processing'): void {
+    const icons = {
+      idle: '$(mic)',
+      listening: '$(radio-tower)',
+      recording: '$(record)',
+      processing: '$(loading~spin)',
+    };
+    const labels = {
+      idle: 'AI Voice',
+      listening: 'Listening (VAD Gate)…',
+      recording: 'Recording…',
+      processing: 'Processing…',
+    };
     this.statusBarItem.text = `${icons[state]} ${labels[state]}`;
     this.statusBarItem.backgroundColor =
-      state === 'listening'
+      state === 'listening' || state === 'recording'
         ? new vscode.ThemeColor('statusBarItem.warningBackground')
         : undefined;
+  }
+
+  /** Mark the start of a voice operation (transcription or command dispatch). */
+  private beginBusy(): void {
+    this.busyCount++;
+    this.updateStatusBar('processing');
+  }
+
+  /** Mark the end of a voice operation; restores status when none remain. */
+  private endBusy(): void {
+    this.busyCount = Math.max(0, this.busyCount - 1);
+    this.restoreStatusBar();
+  }
+
+  /** Derive the status bar from the actual lifecycle state. */
+  private restoreStatusBar(): void {
+    if (this.busyCount > 0) {
+      this.updateStatusBar('processing');
+    } else if (this.isRecording) {
+      this.updateStatusBar('recording');
+    } else if (this.isListening) {
+      this.updateStatusBar('listening');
+    } else {
+      this.updateStatusBar('idle');
+    }
+  }
+
+  /** Report transcript + outcome to the voice panel so the user sees what was heard. */
+  private postVoiceStatus(
+    phase: VoiceOutcome | 'processing',
+    transcript: string,
+    detail: string,
+    command?: VoiceCommandType
+  ): void {
+    this.activePanel?.webview.postMessage({
+      type: 'voiceStatus',
+      phase,
+      transcript,
+      detail,
+      command,
+    });
+  }
+
+  /**
+   * Clicking in the voice webview makes `activeTextEditor` undefined, which
+   * would make `aiReview.reviewFile` report "Open a file first". Re-focus the
+   * last real text editor so the review targets the file the user was on.
+   */
+  private async focusLastTextEditor(): Promise<void> {
+    if (vscode.window.activeTextEditor) {
+      return;
+    }
+    const last = this.lastTextEditor;
+    if (last && !last.document.isClosed) {
+      await vscode.window.showTextDocument(last.document, {
+        viewColumn: last.viewColumn,
+        preserveFocus: false,
+      });
+    }
   }
 
   /** Open the voice webview panel that handles microphone access + Pre-STT VAD Gate */
@@ -1040,28 +1210,252 @@ export class VoiceController {
       offDurationMs: cfg.get<number>('vadOffDurationMs', 400),
     };
 
-    this.activePanel.webview.html = this.getVoiceWebviewHtml(vadConfig);
+    this.activePanel.webview.html = VoiceController.getVoiceWebviewHtml(vadConfig);
+    // Webview session IDs restart at 1 for each new panel.
+    this.lastProcessedSessionId = -1;
 
-    // Receive transcripts from the webview
+    // Receive messages from the webview
     this.activePanel.webview.onDidReceiveMessage(async (msg) => {
       if (msg.type === 'transcript') {
         await this.processTranscript(
           msg.transcript as string,
           msg.energyDb as number,
-          msg.sessionId as number | undefined
+          msg.sessionId as number | undefined,
+          { source: msg.source === 'simulator' ? 'simulator' : 'continuous' }
         );
+      } else if (msg.type === 'startRecording') {
+        await this.startNativeRecording();
+      } else if (msg.type === 'stopRecording') {
+        await this.stopNativeRecording();
       }
     });
 
     this.activePanel.onDidDispose(() => {
+      this.activePanel = undefined; // never post to a disposed webview
+      this.cancelNativeRecording();
       this.isListening = false;
-      this.updateStatusBar('idle');
+      this.restoreStatusBar();
       this.sttLifecycle.reset();
-      this.activePanel = undefined;
     });
   }
 
-  private getVoiceWebviewHtml(vadConfig: VadConfig): string {
+  // ── Native Host Microphone Recording (Outside Webview) ─────────────────────
+
+  private postRecordingState(state: 'idle' | 'recording' | 'transcribing' | 'error', errorMsg?: string): void {
+    this.activePanel?.webview.postMessage({
+      type: 'recordingState',
+      state,
+      error: errorMsg,
+    });
+  }
+
+  public async startNativeRecording(): Promise<void> {
+    if (this.isRecording) {
+      return;
+    }
+
+    // Allocate temporary WAV file in OS tempdir
+    const tmpDir = os.tmpdir();
+    const fileName = `ai_review_voice_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.wav`;
+    this.recordingFilePath = path.join(tmpDir, fileName);
+
+    // Prefer parecord (PipeWire/PulseAudio), fall back to arecord (ALSA)
+    const candidates = this.resolveRecorders(this.recordingFilePath);
+    if (candidates.length === 0) {
+      const err = 'Neither "parecord" (pipewire-pulse/pulseaudio) nor "arecord" (alsa-utils) is installed on this system. On Arch Linux, install one with: sudo pacman -S pipewire-pulse or sudo pacman -S alsa-utils';
+      vscode.window.showErrorMessage(`AI Code Review: ${err}`);
+      this.postRecordingState('error', err);
+      this.recordingFilePath = null;
+      return;
+    }
+
+    this.spawnRecorder(candidates, 0);
+  }
+
+  /**
+   * Installed recorder commands, in preference order. Being installed does not
+   * prove the microphone is usable; spawnRecorder() falls back on early failure.
+   * Both record mono 16-bit PCM at 16 kHz WAV (the format Vosk expects).
+   */
+  protected resolveRecorders(filePath: string): Array<{ exe: string; args: string[] }> {
+    const found: Array<{ exe: string; args: string[] }> = [];
+    const has = (exe: string): boolean => {
+      try {
+        child_process.execFileSync('which', [exe], { stdio: 'ignore' });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (has('parecord')) {
+      found.push({
+        exe: 'parecord',
+        args: ['--record', '--file-format=wav', '--format=s16le', '--rate=16000', '--channels=1', filePath],
+      });
+    }
+    if (has('arecord')) {
+      found.push({
+        exe: 'arecord',
+        args: ['-q', '-f', 'S16_LE', '-r', '16000', '-c', '1', '-t', 'wav', filePath],
+      });
+    }
+    return found;
+  }
+
+  private spawnRecorder(candidates: Array<{ exe: string; args: string[] }>, index: number): void {
+    const { exe, args } = candidates[index];
+    let stderr = '';
+    let proc: child_process.ChildProcess;
+
+    const failOrFallback = (reason: string): void => {
+      // Ignore stale callbacks from a process we no longer own (already stopped/cancelled)
+      if (this.recordingProcess !== proc) {
+        return;
+      }
+      this.recordingProcess = null;
+      this.isRecording = false;
+      if (index + 1 < candidates.length) {
+        console.warn(`[aiReview] ${exe} failed (${reason}); falling back to ${candidates[index + 1].exe}`);
+        this.cleanupNativeRecordingFile(this.recordingFilePath ?? undefined);
+        this.recordingFilePath = candidates[index + 1].args[candidates[index + 1].args.length - 1];
+        this.spawnRecorder(candidates, index + 1);
+        return;
+      }
+      const errMsg = `Microphone capture failed (${exe}): ${reason}`;
+      vscode.window.showErrorMessage(errMsg);
+      this.postRecordingState('error', errMsg);
+      this.cleanupNativeRecordingFile();
+      this.restoreStatusBar();
+    };
+
+    try {
+      proc = child_process.spawn(exe, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    } catch (e: any) {
+      proc = undefined as unknown as child_process.ChildProcess;
+      this.recordingProcess = proc;
+      failOrFallback(`could not start: ${e?.message ?? e}`);
+      return;
+    }
+
+    this.recordingProcess = proc;
+    this.isRecording = true;
+    this.restoreStatusBar();
+    this.postRecordingState('recording');
+
+    proc.stderr?.on('data', (chunk: Buffer) => {
+      stderr = (stderr + chunk.toString()).slice(-500);
+    });
+    proc.on('error', (err) => failOrFallback(err.message));
+    proc.on('exit', (code, signal) => {
+      // Exiting on its own while we still own it means the device failed.
+      failOrFallback(stderr.trim() || `exited unexpectedly (code ${code}, signal ${signal})`);
+    });
+  }
+
+  public async stopNativeRecording(): Promise<void> {
+    if (!this.isRecording || !this.recordingProcess) {
+      return;
+    }
+
+    const recordedPath = this.recordingFilePath;
+    const proc = this.recordingProcess;
+    // Release ownership first so the 'exit' handler treats this as an expected stop
+    this.isRecording = false;
+    this.recordingProcess = null;
+    this.recordingFilePath = null;
+    this.postRecordingState('transcribing');
+    this.beginBusy();
+
+    try {
+      // SIGINT lets parecord/arecord finalise the WAV header; await real exit
+      await new Promise<void>((resolve) => {
+        if (proc.exitCode !== null || proc.signalCode !== null) {
+          resolve();
+          return;
+        }
+        let timer: NodeJS.Timeout | undefined;
+        const done = () => {
+          if (timer) {
+            clearTimeout(timer);
+            timer = undefined;
+          }
+          resolve();
+        };
+        proc.once('exit', done);
+        proc.kill('SIGINT');
+        // Safety net if the recorder ignores SIGINT
+        timer = setTimeout(() => {
+          try { proc.kill('SIGKILL'); } catch { /* ignore */ }
+          done();
+        }, 1500);
+      });
+
+      // Verify file exists and has audio data
+      if (!recordedPath || !fs.existsSync(recordedPath)) {
+        throw new Error('Recorded audio file was not created.');
+      }
+
+      const stat = fs.statSync(recordedPath);
+      if (stat.size <= 44) { // Standard WAV header is 44 bytes; <=44 means no audio captured
+        throw new Error('No audio was captured. Please check microphone input and speak clearly.');
+      }
+
+      // Upload to the local FastAPI backend (/voice/transcribe on localhost)
+      const transcribeRes = await this.api.transcribeAudio(recordedPath);
+      const transcript = (transcribeRes?.transcript || '').trim();
+
+      this.postRecordingState('idle');
+
+      if (!transcript) {
+        vscode.window.showWarningMessage('Voice: no speech was recognised. Please try again, speaking clearly.');
+        this.postVoiceStatus('empty', '', 'No speech was recognised. Please try again, speaking clearly.');
+        return;
+      }
+
+      // Forward genuine transcript to the existing command pipeline (exactly once)
+      await this.processTranscript(transcript, -20.0, Date.now(), { source: 'microphone' });
+    } catch (err: any) {
+      const formattedError = ApiClient.formatError(err);
+      vscode.window.showErrorMessage(`Voice Transcription Failed: ${formattedError}`);
+      this.postRecordingState('error', formattedError);
+    } finally {
+      this.cleanupNativeRecordingFile(recordedPath);
+      this.endBusy();
+    }
+  }
+
+  public cancelNativeRecording(): void {
+    const proc = this.recordingProcess;
+    // Release ownership first so the exit handler ignores this expected stop
+    this.recordingProcess = null;
+    this.isRecording = false;
+    if (proc) {
+      try {
+        proc.kill('SIGTERM');
+      } catch { /* ignore */ }
+    }
+    this.cleanupNativeRecordingFile();
+    this.postRecordingState('idle');
+    this.restoreStatusBar();
+  }
+
+  private cleanupNativeRecordingFile(customPath?: string | null): void {
+    const target = customPath ?? this.recordingFilePath;
+    if (target) {
+      try {
+        if (fs.existsSync(target)) {
+          fs.unlinkSync(target);
+        }
+      } catch (e) {
+        console.warn('[aiReview] Failed to clean up temp audio file:', target, e);
+      }
+    }
+    if (!customPath || target === this.recordingFilePath) {
+      this.recordingFilePath = null;
+    }
+  }
+
+  public static getVoiceWebviewHtml(vadConfig: VadConfig): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1137,42 +1531,39 @@ export class VoiceController {
   </style>
 </head>
 <body>
-  <h2>AI Code Review — Local VAD Gate</h2>
+  <h2>AI Code Review — Voice Assistant</h2>
   <div id="status">🎙</div>
-  <div id="vad-badge">VAD State: IDLE (STT Stopped)</div>
-  <div id="transcript">Waiting for speech energy…</div>
-  <div id="energy-bar"><div id="energy-fill"></div></div>
-  <p class="hint">
-    STT is kept <strong>stopped during silence</strong>.<br/>
-    Speak to trigger VAD (ON threshold: ${vadConfig.onThresholdDb} dB).
-  </p>
-  <button onclick="toggleListen()" id="toggleBtn">Stop Listening</button>
+  <div id="vad-badge">Status: Ready</div>
+  <div id="transcript">Ready for voice input. Click "Start Recording" or use the fallback simulator below.</div>
+
+  <div style="display: flex; gap: 10px; margin: 10px 0;">
+    <button id="recordBtn" onclick="toggleNativeRecord()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); font-weight: bold;">
+      ⏺ Start Recording
+    </button>
+  </div>
+
+  <div id="privacy-disclosure" style="font-size: 0.78rem; opacity: 0.7; max-width: 420px; text-align: center; line-height: 1.3;">
+    🔒 <em>Privacy Notice:</em> Audio is captured locally via system audio (parecord/arecord) and transcribed entirely offline using local Vosk. No audio or data is ever sent to the cloud.
+  </div>
+
+  <div id="fallback-hint" style="width: 100%; max-width: 420px; text-align: center; border-top: 1px solid var(--vscode-input-border); padding-top: 14px; margin-top: 10px;">
+    <p style="font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">Fallback Command Simulator:</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;">
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('review this file')">Review</button>
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('show critical findings')">Critical</button>
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('explain finding 1')">Explain #1</button>
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('generate a fix for finding 1')">Fix #1</button>
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('accept finding 1')">Accept #1</button>
+      <button style="padding: 4px 10px; font-size: 0.8rem;" onclick="sendManualCommand('reject finding 1')">Reject #1</button>
+    </div>
+  </div>
 
   <script>
     const vscode = acquireVsCodeApi();
-    let recognition;
-    let listening = true;
-    let audioCtx, analyser, micStream;
-
-    // VAD Configuration & State Machine
-    const VAD_ON_DB = ${vadConfig.onThresholdDb};
-    const VAD_OFF_DB = ${vadConfig.offThresholdDb};
-    const VAD_ON_MS = ${vadConfig.onDurationMs};
-    const VAD_OFF_MS = ${vadConfig.offDurationMs};
-
-    let vadState = 'IDLE';
-    let isSpeechActive = false;
-    let consecutiveOnMs = 0;
-    let consecutiveOffMs = 0;
-    let energyBuffer = [];
-    let lastFrameTime = performance.now();
-
-    // Session Isolation & Lifecycle
     let currentSessionId = 0;
-    let currentSessionState = 'IDLE'; // 'IDLE' | 'STARTING' | 'LISTENING' | 'PROCESSING'
-    let currentSessionDispatched = false;
+    let isCurrentlyRecording = false;
 
-    // ── Extension Messages (TTS & Command Completion) ────────────────────
+    // ── Extension Messages (TTS, Command Completion, Recording State) ────────
     window.addEventListener('message', e => {
       const msg = e.data;
       if (msg.type === 'speak' && msg.text) {
@@ -1180,18 +1571,87 @@ export class VoiceController {
         utt.rate = 1.1;
         window.speechSynthesis.speak(utt);
       } else if (msg.type === 'commandCompleted') {
-        if (!msg.sessionId || msg.sessionId === currentSessionId) {
-          currentSessionState = 'IDLE';
-          isSpeechActive = false;
-          vadState = 'IDLE';
-          const badge = document.getElementById('vad-badge');
-          if (badge) {
-            badge.textContent = 'VAD: IDLE (STT Stopped)';
+        const badge = document.getElementById('vad-badge');
+        if (badge) {
+          badge.textContent = 'Status: Ready';
+          badge.style.background = 'var(--vscode-badge-background)';
+        }
+        document.getElementById('status').classList.remove('active');
+      } else if (msg.type === 'voiceStatus') {
+        const badge = document.getElementById('vad-badge');
+        const transcriptEl = document.getElementById('transcript');
+        const heard = msg.transcript ? 'Heard: "' + msg.transcript + '"' : '';
+        if (transcriptEl) {
+          transcriptEl.textContent = [heard, msg.detail || ''].filter(Boolean).join(' — ');
+        }
+        if (badge) {
+          if (msg.phase === 'processing') {
+            badge.textContent = '⚙ Processing Command…';
+            badge.style.background = '#0288d1';
+          } else if (msg.phase === 'executed') {
+            badge.textContent = 'Status: Ready (last command: ' + (msg.command || 'done') + ')';
             badge.style.background = 'var(--vscode-badge-background)';
+          } else if (msg.phase === 'failed') {
+            badge.textContent = 'Status: Ready (last command failed)';
+            badge.style.background = 'var(--vscode-inputValidation-errorBackground, #d50000)';
+          } else {
+            badge.textContent = 'Status: Ready (no command executed)';
+            badge.style.background = 'var(--vscode-badge-background)';
+          }
+        }
+      } else if (msg.type === 'recordingState') {
+        const badge = document.getElementById('vad-badge');
+        const statusIcon = document.getElementById('status');
+        const recordBtn = document.getElementById('recordBtn');
+        const transcriptEl = document.getElementById('transcript');
+
+        if (msg.state === 'recording') {
+          isCurrentlyRecording = true;
+          recordBtn.textContent = '⏹ Stop Recording';
+          recordBtn.style.background = 'var(--vscode-inputValidation-errorBackground, #d50000)';
+          badge.textContent = '🎙 Recording from Microphone…';
+          badge.style.background = '#d50000';
+          statusIcon.classList.add('active');
+          transcriptEl.textContent = 'Listening to microphone… Speak your command, then click Stop Recording.';
+        } else if (msg.state === 'transcribing') {
+          isCurrentlyRecording = false;
+          recordBtn.textContent = '⏳ Transcribing…';
+          recordBtn.disabled = true;
+          recordBtn.style.background = 'var(--vscode-button-background)';
+          badge.textContent = '⚡ Transcribing Audio (Local Vosk)…';
+          badge.style.background = '#0288d1';
+          statusIcon.classList.remove('active');
+          transcriptEl.textContent = 'Transcribing audio locally using offline Vosk engine…';
+        } else if (msg.state === 'idle') {
+          isCurrentlyRecording = false;
+          recordBtn.textContent = '⏺ Start Recording';
+          recordBtn.disabled = false;
+          recordBtn.style.background = 'var(--vscode-button-background)';
+          badge.textContent = 'Status: Ready';
+          badge.style.background = 'var(--vscode-badge-background)';
+          statusIcon.classList.remove('active');
+        } else if (msg.state === 'error') {
+          isCurrentlyRecording = false;
+          recordBtn.textContent = '⏺ Start Recording';
+          recordBtn.disabled = false;
+          recordBtn.style.background = 'var(--vscode-button-background)';
+          badge.textContent = 'Error during recording/transcription';
+          badge.style.background = 'var(--vscode-inputValidation-errorBackground, #d50000)';
+          statusIcon.classList.remove('active');
+          if (msg.error) {
+            transcriptEl.textContent = 'Error: ' + msg.error;
           }
         }
       }
     });
+
+    function toggleNativeRecord() {
+      if (!isCurrentlyRecording) {
+        vscode.postMessage({ type: 'startRecording' });
+      } else {
+        vscode.postMessage({ type: 'stopRecording' });
+      }
+    }
 
     // ── STT Lifecycle Safe Controls ───────────────────────────────────────
     function safeStartRecognition(sessionId) {
@@ -1220,8 +1680,13 @@ export class VoiceController {
     }
 
     // ── Audio Analysis & Local Hysteresis VAD Gate ────────────────────────
+    let micBlockedByPolicy = false;
+
     async function startAudioAnalysis() {
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('getUserMedia is not supported in this document context.');
+        }
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioCtx = new AudioContext();
         const source = audioCtx.createMediaStreamSource(micStream);
@@ -1230,8 +1695,49 @@ export class VoiceController {
         source.connect(analyser);
         updateEnergy();
       } catch(e) {
-        document.getElementById('transcript').textContent = 'Microphone access denied/error: ' + e.message;
+        console.warn('Microphone access unavailable:', e);
+        micBlockedByPolicy = true;
+        const msg = String(e && e.message ? e.message : e);
+        const transcriptEl = document.getElementById('transcript');
+        const badgeEl = document.getElementById('vad-badge');
+        const fallbackHint = document.getElementById('fallback-hint');
+        if (msg.toLowerCase().includes('permissions policy') || msg.toLowerCase().includes('not allowed')) {
+          if (transcriptEl) {
+            transcriptEl.innerHTML = '<strong>Microphone restricted by VS Code Webview Permissions Policy.</strong><br/><span style="font-size:0.85rem;opacity:0.8;">Standard VS Code webviews restrict media capture (Issue #250568). Type or simulate a voice command below:</span>';
+          }
+          if (badgeEl) {
+            badgeEl.textContent = 'Hardware Mic Blocked by VS Code Policy';
+            badgeEl.style.background = 'var(--vscode-inputValidation-warningBackground, #5a4300)';
+          }
+          if (fallbackHint) {
+            fallbackHint.style.display = 'block';
+          }
+        } else {
+          if (transcriptEl) {
+            transcriptEl.textContent = 'Microphone access denied/error: ' + msg;
+          }
+        }
       }
+    }
+
+    function sendManualCommand(cmdText) {
+      if (!cmdText || !cmdText.trim()) return;
+      const trimmed = cmdText.trim();
+      currentSessionId++;
+      currentSessionState = 'PROCESSING';
+      currentSessionDispatched = true;
+      const transcriptEl = document.getElementById('transcript');
+      if (transcriptEl) {
+        transcriptEl.textContent = 'Command: ' + trimmed;
+      }
+      vscode.postMessage({
+        type: 'transcript',
+        transcript: trimmed,
+        energyDb: -20.0,
+        sessionId: currentSessionId,
+        vadState: 'COMMAND_PROCESSING',
+        source: 'simulator'
+      });
     }
 
     function getEnergyDb() {
@@ -1304,7 +1810,7 @@ export class VoiceController {
         }
       }
 
-      if (listening) { requestAnimationFrame(updateEnergy); }
+      if (listening && !micBlockedByPolicy) { requestAnimationFrame(updateEnergy); }
     }
 
     // ── Web Speech API Setup ──────────────────────────────────────────────
@@ -1312,11 +1818,16 @@ export class VoiceController {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         document.getElementById('transcript').textContent =
-          'Speech recognition not supported in this browser. Use Chrome/Edge.';
+          'Speech recognition not supported in this browser environment.';
         return;
       }
 
-      recognition = new SpeechRecognition();
+      try {
+        recognition = new SpeechRecognition();
+      } catch (err) {
+        console.warn('SpeechRecognition initialization error:', err);
+        return;
+      }
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
@@ -1362,7 +1873,15 @@ export class VoiceController {
         vadState = 'IDLE';
         document.getElementById('status').classList.remove('active');
         if (e.error !== 'no-speech') {
-          document.getElementById('transcript').textContent = 'Error: ' + e.error;
+          console.warn('SpeechRecognition error:', e.error);
+          if (e.error === 'not-allowed') {
+            document.getElementById('transcript').innerHTML =
+              '<strong>SpeechRecognition not allowed.</strong><br/><span style="font-size:0.85rem;opacity:0.8;">VS Code webview permissions policy does not permit microphone access. Use quick commands below.</span>';
+            const fallbackHint = document.getElementById('fallback-hint');
+            if (fallbackHint) { fallbackHint.style.display = 'block'; }
+          } else {
+            document.getElementById('transcript').textContent = 'Error: ' + e.error;
+          }
         }
       };
 

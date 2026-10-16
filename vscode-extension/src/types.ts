@@ -179,3 +179,10 @@ export interface SttSession {
   endedAt?: number;
   error?: string;
 }
+
+/** Response from POST /voice/transcribe */
+export interface TranscribeResponse {
+  transcript: string;
+  language?: string;
+  duration?: number;
+}
